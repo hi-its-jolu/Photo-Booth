@@ -1,0 +1,8 @@
+# Webcam support via OpenCV
+opencv-python>=4.8,<5.0
+
+# Image processing
+Pillow>=10.0,<12.0
+
+# pygame (UI/display) - requires SDL2 installed via brew on Mac
+pygame>=2.5,<3.0
