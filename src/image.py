@@ -11,7 +11,6 @@ from config.config import (
     THUMB_PADDING,
 )
 
-
 def _to_rgb(frame_bgr, flip=True):
     rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     if flip:

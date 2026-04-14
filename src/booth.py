@@ -12,13 +12,15 @@ from config.config import (
     TOTAL_PHOTOS,
     PREVIEW_DURATION,
     FLASH_DURATION,
+    PRINTER_CHECK_INTERVAL
 )
 
 from printer import (
     print_photos,
     check_printer_paper,
     check_printer_ink,
-    check_printer_connection
+    check_printer_connection,
+    draw_printer_warning,
 )
 
 from image import (
@@ -31,7 +33,6 @@ from image import (
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-
 def main():
     os.makedirs(PHOTOS_DIR, exist_ok=True)
 
@@ -73,6 +74,10 @@ def main():
     dim_surf.fill((0, 0, 0))
     dim_surf.set_alpha(140)
 
+    # ── Printer status ─────────────────────────────────────────────
+    printer_ok = check_printer_connection()
+    printer_last_check = time.monotonic()
+
     # ── State machine ──────────────────────────────────────────────
     # "idle"      → waiting for SPACE
     # "countdown" → timer running, then snap photo
@@ -88,7 +93,6 @@ def main():
     preview_surf = None
     event_time = 0.0
 
-
     def clear_session():
         thumbnails.clear()
         photo_paths.clear()
@@ -98,19 +102,26 @@ def main():
     while running:
         now = time.monotonic()
 
+        # ── Periodic printer check ─────────────────────────────────
+        if now - printer_last_check >= PRINTER_CHECK_INTERVAL:
+            printer_ok = check_printer_connection()
+            printer_last_check = now
+
         # ── Grid state: no camera needed, render from cache ────────
         if state == "grid":
             screen.fill((20, 20, 20))
             for item in grid_surfs:
                 if item is None:
                     continue
-                
+
                 surf, x, y, nw, nh = item
                 screen.blit(surf, (x, y))
-    
+
                 pygame.draw.rect(screen, (255, 255, 255), (x, y, nw, nh), 2)
-            
+
             screen.blit(grid_hint, grid_hint.get_rect(centerx=screen_w // 2, bottom=screen_h - 16))
+            if not printer_ok:
+                draw_printer_warning(screen)
             pygame.display.flip()
             clock.tick(30)
             
@@ -185,6 +196,8 @@ def main():
 
         # ── Thumbnails, flip, events ───────────────────────────────
         draw_thumbnails(screen, thumbnails, screen_w, screen_h)
+        if not printer_ok:
+            draw_printer_warning(screen)
         pygame.display.flip()
         clock.tick(30)
 
