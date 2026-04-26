@@ -213,7 +213,7 @@ def check_printer_connection() -> bool:
 
 # ── Printing ──────────────────────────────────────────────────────────────────
 
-def print_composite(surface: pygame.Surface) -> None:
+def print_composite(surface: pygame.Surface, copies: int = 1) -> None:
     """Save the polaroid composite surface to a temp file and send it to the printer."""
     import tempfile
     tmp = tempfile.NamedTemporaryFile(
@@ -225,7 +225,10 @@ def print_composite(surface: pygame.Surface) -> None:
     pygame.image.save(surface, tmp_path)
 
     try:
-        subprocess.run(["lp", tmp_path], capture_output=True, timeout=10)
+        subprocess.run(
+            ["lp", "-n", str(max(1, copies)), tmp_path],
+            capture_output=True, timeout=10,
+        )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
