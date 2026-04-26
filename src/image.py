@@ -99,6 +99,44 @@ def build_grid_surfs(photo_paths, screen_w, screen_h):
         surfs.append((surf, x, y, nw, nh))
     return surfs
 
+def build_polaroid_surf(photo_paths: list, screen_w: int, screen_h: int) -> pygame.Surface:
+    """Compose up to 4 photos into a single polaroid-style pygame Surface (2×2 grid)."""
+    target_h = int(screen_h * 0.74)
+    border   = max(int(target_h * 0.042), 18)   # equal border top/left/right
+    bottom   = max(int(target_h * 0.13),  55)   # thicker bottom (classic polaroid)
+    gap      = max(int(target_h * 0.014),  7)   # gap between the two photos
+
+    cell_h = (target_h - border - bottom - gap) // 2
+    cell_w = cell_h                              # square cells
+    pol_w  = 2 * cell_w + gap + 2 * border
+    pol_h  = target_h
+
+    surf = pygame.Surface((pol_w, pol_h))
+    surf.fill((252, 252, 248))                   # slightly warm white
+
+    offsets = [
+        (border,                border),
+        (border + cell_w + gap, border),
+        (border,                border + cell_h + gap),
+        (border + cell_w + gap, border + cell_h + gap),
+    ]
+
+    for i, path in enumerate(photo_paths[:4]):
+        img = cv2.imread(path)
+        if img is None:
+            continue
+        img_rgb = _to_rgb(img, flip=True)          # match grid/preview orientation
+        ih, iw  = img_rgb.shape[:2]
+        scale   = max(cell_w / iw, cell_h / ih)   # fill cell, then center-crop
+        nw, nh  = int(iw * scale), int(ih * scale)
+        img_rgb = cv2.resize(img_rgb, (nw, nh))
+        cx, cy  = (nw - cell_w) // 2, (nh - cell_h) // 2
+        cell_img = img_rgb[cy:cy + cell_h, cx:cx + cell_w]
+        surf.blit(pygame.surfarray.make_surface(cell_img.swapaxes(0, 1)), offsets[i])
+
+    return surf
+
+
 def load_carousel_photos(target_h):
     """Load all past photos from PHOTOS_DIR scaled to target_h for strip carousel display."""
     if not os.path.isdir(PHOTOS_DIR):

@@ -18,11 +18,22 @@ from image import (
     grab_live_surface,
     snap_photo,
     build_grid_surfs,
+    build_polaroid_surf,
     draw_thumbnails,
     load_carousel_photos,
 )
 
-from booth import render_idle, render_countdown, render_preview, render_grid
+from printer import print_composite
+
+from booth import (
+    render_idle,
+    render_countdown,
+    render_preview,
+    render_grid,
+    render_printing_compose,
+    render_printing_hold,
+    render_printing_slide,
+)
 
 
 def main():
@@ -73,6 +84,11 @@ def main():
     carousel_bar = pygame.Surface((screen_w, CAROUSEL_STRIP_HEIGHT), pygame.SRCALPHA)
     carousel_bar.fill((0, 0, 0, 160))
 
+    # ── Printing animation constants ───────────────────────────────
+    COMPOSE_DUR  = 0.7   # seconds: grid → polaroid crossfade
+    HOLD_MIN_DUR = 2.0   # seconds: minimum hold before sliding
+    SLIDE_DUR    = 0.8   # seconds: polaroid exits downward
+
     state = "idle"
     countdown_start = 0.0
     skip_countdown = False
@@ -83,6 +99,12 @@ def main():
     grid_surfs = []
     preview_surf = None
     event_time = 0.0
+
+    # Printing state
+    polaroid_surf      = None
+    polaroid_rect      = None
+    print_phase        = None   # "compose" | "hold" | "slide"
+    print_phase_start  = 0.0
 
     carousel_photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
     carousel_start_time = time.monotonic()
@@ -97,6 +119,47 @@ def main():
     while running:
         now = time.monotonic()
 
+        # ── Printing animation state ───────────────────────────────
+        if state == "printing":
+            elapsed = now - print_phase_start
+            if print_phase == "compose":
+                t = min(1.0, elapsed / COMPOSE_DUR)
+                render_printing_compose(screen, grid_surfs, polaroid_surf, polaroid_rect, t)
+                if elapsed >= COMPOSE_DUR:
+                    print_composite(polaroid_surf)   # spool the print job
+                    print_phase = "hold"
+                    print_phase_start = now
+
+            elif print_phase == "hold":
+                render_printing_hold(screen, polaroid_surf, polaroid_rect,
+                                     screen_w, screen_h, now)
+                if elapsed >= HOLD_MIN_DUR:
+                    print_phase = "slide"
+                    print_phase_start = now
+
+            elif print_phase == "slide":
+                t = min(1.0, elapsed / SLIDE_DUR)
+                render_printing_slide(screen, polaroid_surf, polaroid_rect, t, screen_h)
+                if elapsed >= SLIDE_DUR:
+                    state = "idle"
+                    print_phase = None
+                    polaroid_surf = None
+                    photo_index = 0
+                    clear_session()
+                    carousel_photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
+                    carousel_start_time = now
+
+            pygame.display.flip()
+            clock.tick(30)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        running = False
+            continue
+
+        # ── Grid state ─────────────────────────────────────────────
         if state == "grid":
             render_grid(screen, grid_surfs, grid_hint, screen_w, screen_h)
             pygame.display.flip()
@@ -108,7 +171,13 @@ def main():
                     if event.key == pygame.K_ESCAPE:
                         running = False
                     elif event.key == pygame.K_p:
-                        print("Printing photos...")
+                        polaroid_surf = build_polaroid_surf(photo_paths, screen_w, screen_h)
+                        polaroid_rect = polaroid_surf.get_rect(
+                            center=(screen_w // 2, screen_h // 2)
+                        )
+                        print_phase = "compose"
+                        print_phase_start = now
+                        state = "printing"
                     elif event.key in (pygame.K_DELETE, pygame.K_BACKSPACE):
                         state = "idle"
                         photo_index = 0
