@@ -11,7 +11,9 @@ from config.config import (
     THUMB_PADDING,
 )
 
+
 def _to_rgb(frame_bgr, flip=True):
+    """Convert a BGR OpenCV frame to RGB, optionally mirroring horizontally."""
     rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     if flip:
         rgb = cv2.flip(rgb, 1)
@@ -96,6 +98,27 @@ def build_grid_surfs(photo_paths, screen_w, screen_h):
         y = pad + row * (cell_h + pad) + (cell_h - nh) // 2
         surfs.append((surf, x, y, nw, nh))
     return surfs
+
+def load_carousel_photos(target_h):
+    """Load all past photos from PHOTOS_DIR scaled to target_h for strip carousel display."""
+    if not os.path.isdir(PHOTOS_DIR):
+        return []
+    files = sorted([
+        os.path.join(PHOTOS_DIR, f) for f in os.listdir(PHOTOS_DIR)
+        if f.lower().endswith(('.jpg', '.jpeg', '.png'))
+    ])
+    surfs = []
+    for fpath in files:
+        img = cv2.imread(fpath)
+        if img is None:
+            continue
+        h, w = img.shape[:2]
+        new_w = int(w * target_h / h)
+        rgb = _to_rgb(img)
+        rgb = cv2.resize(rgb, (new_w, target_h))
+        surfs.append(pygame.surfarray.make_surface(rgb.swapaxes(0, 1)))
+    return surfs
+
 
 def draw_thumbnails(screen, thumbnails, screen_w, screen_h):
     """Render the thumbnail strip at the bottom of the screen."""
