@@ -54,35 +54,87 @@ def render_preview(screen, flash_surf, dim_surf, preview_surf, age, screen_w, sc
 
 
 def render_grid(screen, grid_surfs, grid_hint, screen_w, screen_h, print_qty=1):
-    screen.fill((20, 20, 20))
+    _BAR_H   = 90
+    _MARGIN  = 28
+    _BTN_H   = 58
+    _CIRC_R  = 27
+    _GAP     = 12
+
+    screen.fill((18, 18, 18))
+
+    # ── Photos with drop shadow ────────────────────────────────────
     for item in grid_surfs:
         if item is None:
             continue
         surf, x, y, nw, nh = item
+        pygame.draw.rect(screen, (0, 0, 0), (x + 5, y + 5, nw, nh))   # shadow
         screen.blit(surf, (x, y))
-        pygame.draw.rect(screen, (255, 255, 255), (x, y, nw, nh), 2)
+        pygame.draw.rect(screen, (210, 210, 210), (x, y, nw, nh), 2)
 
-    # ── Qty selector ──────────────────────────────────────────────
-    hint_h   = grid_hint.get_height()
-    qty_font = _font(62)
-    label    = f"  {print_qty} {'copy' if print_qty == 1 else 'copies'}  "
-    left_col  = (70, 70, 70)   if print_qty <= PRINT_QTY_MIN else (220, 220, 220)
-    right_col = (70, 70, 70)   if print_qty >= PRINT_QTY_MAX else (220, 220, 220)
+    # ── Action bar ────────────────────────────────────────────────
+    bar_y  = screen_h - _BAR_H
+    btn_cy = bar_y + _BAR_H // 2
+    btn_top = btn_cy - _BTN_H // 2
 
-    left_s  = qty_font.render("◀", True, left_col)
-    right_s = qty_font.render("▶", True, right_col)
-    label_s = qty_font.render(label, True, (255, 255, 255))
+    pygame.draw.rect(screen, (24, 24, 24), (0, bar_y, screen_w, _BAR_H))
+    pygame.draw.line(screen, (52, 52, 52), (0, bar_y), (screen_w, bar_y), 1)
 
-    total_w  = left_s.get_width() + label_s.get_width() + right_s.get_width()
-    row_h    = qty_font.get_height()
-    qty_y    = screen_h - 16 - hint_h - 14 - row_h
-    start_x  = (screen_w - total_w) // 2
+    # ── PRINT button — blue, right ─────────────────────────────────
+    PRINT_W    = 190
+    print_rect = pygame.Rect(screen_w - _MARGIN - PRINT_W, btn_top, PRINT_W, _BTN_H)
+    pygame.draw.rect(screen, (28, 98, 195), print_rect, border_radius=10)
+    pygame.draw.rect(screen, (60, 135, 235), print_rect, 2, border_radius=10)
+    screen.blit(
+        _font(40).render("PRINT", True, (255, 255, 255)),
+        _font(40).render("PRINT", True, (255, 255, 255)).get_rect(center=print_rect.center),
+    )
+    pk = _font(21).render("P", True, (140, 190, 255))
+    screen.blit(pk, (print_rect.left + 8, print_rect.top + 6))
 
-    screen.blit(left_s,  (start_x, qty_y))
-    screen.blit(label_s, (start_x + left_s.get_width(), qty_y))
-    screen.blit(right_s, (start_x + left_s.get_width() + label_s.get_width(), qty_y))
+    # ── RETAKE button — red ────────────────────────────────────────
+    RETAKE_W    = 172
+    retake_rect = pygame.Rect(print_rect.left - _GAP - RETAKE_W, btn_top, RETAKE_W, _BTN_H)
+    pygame.draw.rect(screen, (175, 35, 35), retake_rect, border_radius=10)
+    pygame.draw.rect(screen, (215, 68, 68), retake_rect, 2, border_radius=10)
+    screen.blit(
+        _font(40).render("RETAKE", True, (255, 255, 255)),
+        _font(40).render("RETAKE", True, (255, 255, 255)).get_rect(center=retake_rect.center),
+    )
+    rk = _font(21).render("DEL", True, (255, 160, 160))
+    screen.blit(rk, (retake_rect.left + 8, retake_rect.top + 6))
 
-    screen.blit(grid_hint, grid_hint.get_rect(centerx=screen_w // 2, bottom=screen_h - 16))
+    # ── Qty selector — grey circles, left ─────────────────────────
+    qty_num_s = _font(54).render(str(print_qty), True, (255, 255, 255))
+    qty_lbl_s = _font(27).render("copy" if print_qty == 1 else "copies", True, (120, 120, 120))
+
+    minus_cx = _MARGIN + _CIRC_R
+    num_x    = minus_cx + _CIRC_R + 14
+    lbl_x    = num_x + qty_num_s.get_width() + 8
+    plus_cx  = lbl_x + qty_lbl_s.get_width() + 14 + _CIRC_R
+
+    for cx, active, arrow in [
+        (minus_cx, print_qty > PRINT_QTY_MIN, "◀"),
+        (plus_cx,  print_qty < PRINT_QTY_MAX, "▶"),
+    ]:
+        bg  = (68, 68, 68) if active else (36, 36, 36)
+        fg  = (205, 205, 205) if active else (62, 62, 62)
+        pygame.draw.circle(screen, bg, (cx, btn_cy), _CIRC_R)
+        pygame.draw.circle(screen, (100, 100, 100), (cx, btn_cy), _CIRC_R, 2)
+        a_s = _font(44).render(arrow, True, fg)
+        screen.blit(a_s, a_s.get_rect(center=(cx, btn_cy)))
+
+    screen.blit(qty_num_s, qty_num_s.get_rect(left=num_x, centery=btn_cy))
+    screen.blit(qty_lbl_s, qty_lbl_s.get_rect(left=lbl_x, centery=btn_cy + 2))
+
+    # ── Keyboard hints for qty (← →) ──────────────────────────────
+    kl = _font(19).render("←", True, (58, 58, 58))
+    kr = _font(19).render("→", True, (58, 58, 58))
+    screen.blit(kl, kl.get_rect(centerx=minus_cx, top=btn_cy + _CIRC_R + 3))
+    screen.blit(kr, kr.get_rect(centerx=plus_cx,  top=btn_cy + _CIRC_R + 3))
+
+    # ── ESC hint — very subtle ─────────────────────────────────────
+    esc = _font(20).render("ESC  quit", True, (46, 46, 46))
+    screen.blit(esc, esc.get_rect(right=screen_w - 10, bottom=screen_h - 5))
 
 
 # ── Printing animation phases ─────────────────────────────────────────────────

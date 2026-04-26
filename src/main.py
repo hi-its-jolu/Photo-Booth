@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import time
+import random
 import cv2
 import pygame
 
@@ -14,7 +15,7 @@ from config.config import (
     PREVIEW_DURATION,
     TARGET_FPS,
     AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER,
-    CAROUSEL_STRIP_HEIGHT,
+    CAROUSEL_STRIP_HEIGHT, CAROUSEL_SCROLL_SPEED, CAROUSEL_PADDING,
     PRINT_COMPOSE_DUR, PRINT_HOLD_DUR, PRINT_SLIDE_DUR,
     PRINT_QTY_DEFAULT, PRINT_QTY_MIN, PRINT_QTY_MAX,
     GPIO_BUTTON_START, GPIO_BUTTON_SNAP, GPIO_BUTTON_PRINT, GPIO_BUTTON_RETAKE,
@@ -153,14 +154,24 @@ def main():
     print_qty         = PRINT_QTY_DEFAULT   # copies selected by user (1-4)
     prints_done       = 0                   # copies animated so far this session
 
-    carousel_photos    = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
-    carousel_start_time = time.monotonic()
-    carousel_y         = screen_h - CAROUSEL_STRIP_HEIGHT
+    def reset_carousel():
+        """Load carousel photos and pick a random start position."""
+        photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
+        if photos:
+            total_w = sum(s.get_width() + CAROUSEL_PADDING for s in photos)
+            rand_offset = random.uniform(0, total_w)
+            start = time.monotonic() - rand_offset / CAROUSEL_SCROLL_SPEED
+        else:
+            start = time.monotonic()
+        return photos, start
 
     def clear_session():
         thumbnails.clear()
         photo_paths.clear()
         grid_surfs.clear()
+
+    carousel_photos, carousel_start_time = reset_carousel()
+    carousel_y         = screen_h - CAROUSEL_STRIP_HEIGHT
 
     # ── Main loop ──────────────────────────────────────────────────
     running = True
@@ -210,8 +221,7 @@ def main():
                         print_qty = PRINT_QTY_DEFAULT
                         photo_index = 0
                         clear_session()
-                        carousel_photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
-                        carousel_start_time = now
+                        carousel_photos, carousel_start_time = reset_carousel()
 
             pygame.display.flip()
             clock.tick(TARGET_FPS)
@@ -251,8 +261,7 @@ def main():
                         photo_index = 0
                         print_qty = PRINT_QTY_DEFAULT
                         clear_session()
-                        carousel_photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
-                        carousel_start_time = now
+                        carousel_photos, carousel_start_time = reset_carousel()
             continue
 
         # ── Live camera feed ───────────────────────────────────────

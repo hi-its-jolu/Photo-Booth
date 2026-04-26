@@ -28,7 +28,7 @@ THUMB_MARGIN_BOTTOM = 15   # px – gap between thumbnails and screen bottom edg
 
 # ── Grid (review screen) ──────────────────────────────────────────────────────
 GRID_PAD           = 20    # px – padding around and between grid cells
-GRID_ACTION_BAR_H  = 60    # px – space at bottom reserved for the action hint
+GRID_ACTION_BAR_H  = 100   # px – space at bottom reserved for the action bar
 
 # ── Preview ───────────────────────────────────────────────────────────────────
 PREVIEW_SCALE = 0.75       # fraction of screen the single-photo preview fills
