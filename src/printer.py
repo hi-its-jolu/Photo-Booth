@@ -2,6 +2,8 @@ import pygame
 import subprocess
 import struct
 import http.client
+import os
+import time
 
 
 # ── Font cache ────────────────────────────────────────────────────────────────
@@ -214,12 +216,22 @@ def check_printer_connection() -> bool:
 # ── Printing ──────────────────────────────────────────────────────────────────
 
 
+_PRINTS_DIR = os.path.join(os.path.dirname(__file__), "..", "prints")
+
+
 def print_polaroid(photo_paths: list, copies: int = 1) -> None:
-    """Render a 4"×6" polaroid composite and send it to the printer on 4x6 photo paper."""
+    """Render a 4"×6" landscape composite, save it to prints/, and send to the printer."""
     from image import build_print_image
     import tempfile
 
     pil_img = build_print_image(photo_paths)
+
+    # Save an archive copy to prints/
+    os.makedirs(_PRINTS_DIR, exist_ok=True)
+    archive_name = time.strftime("print_%Y%m%d_%H%M%S.jpg")
+    archive_path = os.path.join(_PRINTS_DIR, archive_name)
+    pil_img.save(archive_path, "JPEG", dpi=(300, 300), quality=95)
+    print(f"Saved print: {archive_path}")
 
     tmp = tempfile.NamedTemporaryFile(suffix=".jpg", prefix="photobooth_print_", delete=False)
     tmp_path = tmp.name
