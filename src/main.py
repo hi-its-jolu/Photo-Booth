@@ -26,12 +26,12 @@ from image import (
     grab_live_surface,
     snap_photo,
     build_grid_surfs,
-    build_polaroid_surf,
+    build_composite_surf,
     draw_thumbnails,
     load_carousel_photos,
 )
 
-from printer import print_composite
+from printer import print_polaroid
 
 from booth import (
     render_idle,
@@ -147,8 +147,8 @@ def main():
     preview_surf    = None
     event_time      = 0.0
 
-    polaroid_surf     = None
-    polaroid_rect     = None
+    composite_surf     = None
+    composite_rect     = None
     print_phase       = None   # "compose" | "hold" | "slide"
     print_phase_start = 0.0
     print_qty         = PRINT_QTY_DEFAULT   # copies selected by user (1-4)
@@ -185,18 +185,18 @@ def main():
             if print_phase == "compose":
                 t = min(1.0, elapsed / PRINT_COMPOSE_DUR)
                 render_printing_compose(
-                    screen, grid_surfs, polaroid_surf, polaroid_rect, t, prints_done
+                    screen, grid_surfs, composite_surf, composite_rect, t, prints_done
                 )
                 if elapsed >= PRINT_COMPOSE_DUR:
                     # Send the full print job on the very first copy
                     if prints_done == 0:
-                        print_composite(polaroid_surf, print_qty)
+                        print_polaroid(photo_paths, print_qty)
                     print_phase = "hold"
                     print_phase_start = now
 
             elif print_phase == "hold":
                 render_printing_hold(
-                    screen, polaroid_surf, polaroid_rect, screen_w, screen_h, now,
+                    screen, composite_surf, composite_rect, screen_w, screen_h, now,
                     prints_done, print_qty,
                 )
                 if elapsed >= PRINT_HOLD_DUR:
@@ -205,7 +205,7 @@ def main():
 
             elif print_phase == "slide":
                 t = min(1.0, elapsed / PRINT_SLIDE_DUR)
-                render_printing_slide(screen, polaroid_surf, polaroid_rect, t, screen_h)
+                render_printing_slide(screen, composite_surf, composite_rect, t, screen_h)
                 if elapsed >= PRINT_SLIDE_DUR:
                     prints_done += 1
                     if prints_done < print_qty:
@@ -216,7 +216,7 @@ def main():
                         # All done → back to idle
                         state = "idle"
                         print_phase = None
-                        polaroid_surf = None
+                        composite_surf = None
                         prints_done = 0
                         print_qty = PRINT_QTY_DEFAULT
                         photo_index = 0
@@ -248,8 +248,8 @@ def main():
                     elif event.key == pygame.K_LEFT:
                         print_qty = max(PRINT_QTY_MIN, print_qty - 1)
                     elif event.key == pygame.K_p:
-                        polaroid_surf = build_polaroid_surf(photo_paths, screen_w, screen_h)
-                        polaroid_rect = polaroid_surf.get_rect(
+                        composite_surf = build_composite_surf(photo_paths, screen_w, screen_h)
+                        composite_rect = composite_surf.get_rect(
                             center=(screen_w // 2, screen_h // 2)
                         )
                         prints_done = 0

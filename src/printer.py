@@ -213,21 +213,33 @@ def check_printer_connection() -> bool:
 
 # ── Printing ──────────────────────────────────────────────────────────────────
 
-def print_composite(surface: pygame.Surface, copies: int = 1) -> None:
-    """Save the polaroid composite surface to a temp file and send it to the printer."""
+
+def print_polaroid(photo_paths: list, copies: int = 1) -> None:
+    """Render a 4"×6" polaroid composite and send it to the printer on 4x6 photo paper."""
+    from image import build_print_image
     import tempfile
-    tmp = tempfile.NamedTemporaryFile(
-        suffix=".png", prefix="photobooth_", delete=False
-    )
+
+    pil_img = build_print_image(photo_paths)
+
+    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", prefix="photobooth_print_", delete=False)
     tmp_path = tmp.name
     tmp.close()
 
-    pygame.image.save(surface, tmp_path)
+    pil_img.save(tmp_path, "JPEG", dpi=(300, 300), quality=95)
 
     try:
         subprocess.run(
-            ["lp", "-n", str(max(1, copies)), tmp_path],
-            capture_output=True, timeout=10,
+            [
+                "lp",
+                "-n", str(max(1, copies)),
+                "-o", "media=4x6",
+                "-o", "MediaType=photographic-glossy",
+                "-o", "landscape",
+                "-o", "fit-to-page",
+                tmp_path,
+            ],
+            capture_output=True,
+            timeout=15,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
