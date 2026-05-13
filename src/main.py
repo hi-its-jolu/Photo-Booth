@@ -31,7 +31,8 @@ from image import (
     load_carousel_photos,
 )
 
-from printer import print_polaroid
+from printer import print_polaroid, get_printer_info, draw_printer_status_dot
+from config.config import PRINTER_CHECK_INTERVAL
 
 from booth import (
     render_idle,
@@ -150,6 +151,10 @@ def main():
     composite_surf     = None
     composite_rect     = None
     print_phase       = None   # "compose" | "hold" | "slide"
+
+    # ── Printer status polling ─────────────────────────────────────
+    printer_info       = get_printer_info()
+    last_printer_check = time.monotonic()
     print_phase_start = 0.0
     print_qty         = PRINT_QTY_DEFAULT   # copies selected by user (1-4)
     prints_done       = 0                   # copies animated so far this session
@@ -178,6 +183,11 @@ def main():
     while running:
         now = time.monotonic()
 
+        # ── Periodic printer poll ──────────────────────────────────
+        if now - last_printer_check >= PRINTER_CHECK_INTERVAL:
+            printer_info       = get_printer_info()
+            last_printer_check = now
+
         # ── Printing animation ─────────────────────────────────────
         if state == "printing":
             elapsed = now - print_phase_start
@@ -188,9 +198,8 @@ def main():
                     screen, grid_surfs, composite_surf, composite_rect, t, prints_done
                 )
                 if elapsed >= PRINT_COMPOSE_DUR:
-                    # Send the full print job on the very first copy
-                    if prints_done == 0:
-                        print_polaroid(photo_paths, print_qty)
+                    # One lp job per animated copy so each matches the visual feedback
+                    print_polaroid(photo_paths, 1)
                     print_phase = "hold"
                     print_phase_start = now
 
@@ -223,6 +232,7 @@ def main():
                         clear_session()
                         carousel_photos, carousel_start_time = reset_carousel()
 
+            draw_printer_status_dot(screen, printer_info)
             pygame.display.flip()
             clock.tick(TARGET_FPS)
             for event in pygame.event.get():
@@ -235,6 +245,7 @@ def main():
         # ── Grid ───────────────────────────────────────────────────
         if state == "grid":
             render_grid(screen, grid_surfs, grid_hint, screen_w, screen_h, print_qty)
+            draw_printer_status_dot(screen, printer_info)
             pygame.display.flip()
             clock.tick(TARGET_FPS)
             for event in pygame.event.get():
@@ -316,6 +327,7 @@ def main():
                     grid_surfs = build_grid_surfs(photo_paths, screen_w, screen_h)
 
         draw_thumbnails(screen, thumbnails, screen_w, screen_h)
+        draw_printer_status_dot(screen, printer_info)
         pygame.display.flip()
         clock.tick(TARGET_FPS)
 

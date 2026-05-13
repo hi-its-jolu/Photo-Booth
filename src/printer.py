@@ -233,11 +233,13 @@ def print_polaroid(photo_paths: list, copies: int = 1) -> None:
     pil_img.save(archive_path, "JPEG", dpi=(300, 300), quality=95)
     print(f"Saved print: {archive_path}")
 
-    tmp = tempfile.NamedTemporaryFile(suffix=".jpg", prefix="photobooth_print_", delete=False)
+    # Use PNG (lossless) for the spool file — avoids JPEG re-compression artefacts
+    # before the printer's own rendering pipeline.
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", prefix="photobooth_print_", delete=False)
     tmp_path = tmp.name
     tmp.close()
 
-    pil_img.save(tmp_path, "JPEG", dpi=(300, 300), quality=95)
+    pil_img.save(tmp_path, "PNG", dpi=(300, 300))
 
     try:
         subprocess.run(
@@ -246,12 +248,16 @@ def print_polaroid(photo_paths: list, copies: int = 1) -> None:
                 "-n", str(max(1, copies)),
                 "-o", "media=4x6",
                 "-o", "MediaType=photographic-glossy",
+                "-o", "InputSlot=Photo",
                 "-o", "landscape",
-                "-o", "fit-to-page",
+                # print-quality=5 → Best (3=Draft, 4=Normal, 5=Best)
+                "-o", "print-quality=5",
+                # Image is already 1800×1200 @ 300 DPI = exact 6"×4" —
+                # omitting fit-to-page prevents CUPS from adding a resampling pass.
                 tmp_path,
             ],
             capture_output=True,
-            timeout=15,
+            timeout=30,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
@@ -351,6 +357,22 @@ def draw_printer_card(surf: pygame.Surface, info: dict) -> None:
     if has_paper:
         paper_surf = _font(24).render(f"Paper: {info['paper']} sheets", True, (175, 175, 175))
         surf.blit(paper_surf, (x + _CARD_PAD, cy))
+
+
+def draw_printer_status_dot(surf: pygame.Surface, info: dict) -> None:
+    """Small colored dot in the top-right corner indicating printer connectivity.
+
+    Green  = idle / ready
+    Yellow = printing / busy
+    Red    = offline / not found
+    """
+    status = info.get("status", "offline")
+    color  = _STATUS_COLOR.get(status, (255, 80, 80))
+
+    cx = surf.get_width() - 28
+    cy = 28
+
+    pygame.draw.circle(surf, color, (cx, cy), 10)  # single solid dot
 
 
 def draw_printer_warning(surf: pygame.Surface) -> None:

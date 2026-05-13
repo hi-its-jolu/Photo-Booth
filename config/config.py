@@ -1,7 +1,9 @@
 import os
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-PHOTOS_DIR = os.path.join(os.path.dirname(__file__), "..", "photos")
+PHOTOS_DIR  = os.path.join(os.path.dirname(__file__), "..", "photos")
+PRINTS_DIR  = os.path.join(os.path.dirname(__file__), "..", "prints")
+ASSETS_DIR  = os.path.join(os.path.dirname(__file__), "..", "assets")
 
 # ── Hardware ──────────────────────────────────────────────────────────────────
 CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camera)

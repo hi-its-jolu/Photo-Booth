@@ -14,6 +14,20 @@ def _font(size: int) -> pygame.font.Font:
     return _fonts[size]
 
 
+# ── Logo cache ────────────────────────────────────────────────────────────────
+_grid_logo_cache: dict[int, pygame.Surface | None] = {}
+
+def _get_grid_logo(width: int) -> pygame.Surface | None:
+    """Lazy-load the wedding logo as a pygame SRCALPHA surface, cached by width."""
+    if width not in _grid_logo_cache:
+        try:
+            from image import _load_logo_surf
+            _grid_logo_cache[width] = _load_logo_surf(width)
+        except Exception:
+            _grid_logo_cache[width] = None
+    return _grid_logo_cache[width]
+
+
 def render_idle(screen, carousel_photos, carousel_bar, carousel_y, now,
                 carousel_start_time, idle_hint, screen_w):
     if carousel_photos:
@@ -71,6 +85,15 @@ def render_grid(screen, grid_surfs, grid_hint, screen_w, screen_h, print_qty=1):
         screen.blit(surf, (x, y))
         pygame.draw.rect(screen, (210, 210, 210), (x, y, nw, nh), 2)
 
+    # ── Wedding logo centered over the photo grid ─────────────────
+    grid_area_h = screen_h - _BAR_H
+    logo_w = max(int(screen_w * 0.28), 80)
+    logo = _get_grid_logo(logo_w)
+    if logo is not None:
+        lx = (screen_w - logo.get_width()) // 2
+        ly = (grid_area_h - logo.get_height()) // 2
+        screen.blit(logo, (lx, ly))
+
     # ── Action bar ────────────────────────────────────────────────
     bar_y  = screen_h - _BAR_H
     btn_cy = bar_y + _BAR_H // 2
@@ -112,25 +135,32 @@ def render_grid(screen, grid_surfs, grid_hint, screen_w, screen_h, print_qty=1):
     lbl_x    = num_x + qty_num_s.get_width() + 8
     plus_cx  = lbl_x + qty_lbl_s.get_width() + 14 + _CIRC_R
 
-    for cx, active, arrow in [
-        (minus_cx, print_qty > PRINT_QTY_MIN, "◀"),
-        (plus_cx,  print_qty < PRINT_QTY_MAX, "▶"),
+    def _draw_triangle(surf, cx, cy, size, pointing_right, color):
+        """Draw a solid triangle arrow centered at (cx, cy)."""
+        h = size // 2
+        w = int(size * 0.6)
+        if pointing_right:
+            pts = [(cx - w // 2, cy - h), (cx + w // 2, cy), (cx - w // 2, cy + h)]
+        else:
+            pts = [(cx + w // 2, cy - h), (cx - w // 2, cy), (cx + w // 2, cy + h)]
+        pygame.draw.polygon(surf, color, pts)
+
+    for cx, active, pointing_right in [
+        (minus_cx, print_qty > PRINT_QTY_MIN, False),
+        (plus_cx,  print_qty < PRINT_QTY_MAX, True),
     ]:
-        bg  = (68, 68, 68) if active else (36, 36, 36)
-        fg  = (205, 205, 205) if active else (62, 62, 62)
+        bg = (68, 68, 68) if active else (36, 36, 36)
+        fg = (205, 205, 205) if active else (62, 62, 62)
         pygame.draw.circle(screen, bg, (cx, btn_cy), _CIRC_R)
         pygame.draw.circle(screen, (100, 100, 100), (cx, btn_cy), _CIRC_R, 2)
-        a_s = _font(44).render(arrow, True, fg)
-        screen.blit(a_s, a_s.get_rect(center=(cx, btn_cy)))
+        _draw_triangle(screen, cx, btn_cy, 22, pointing_right, fg)
 
     screen.blit(qty_num_s, qty_num_s.get_rect(left=num_x, centery=btn_cy))
     screen.blit(qty_lbl_s, qty_lbl_s.get_rect(left=lbl_x, centery=btn_cy + 2))
 
-    # ── Keyboard hints for qty (← →) ──────────────────────────────
-    kl = _font(19).render("←", True, (58, 58, 58))
-    kr = _font(19).render("→", True, (58, 58, 58))
-    screen.blit(kl, kl.get_rect(centerx=minus_cx, top=btn_cy + _CIRC_R + 3))
-    screen.blit(kr, kr.get_rect(centerx=plus_cx,  top=btn_cy + _CIRC_R + 3))
+    # ── Keyboard hints for qty ─────────────────────────────────────
+    kl = _font(19).render("< >", True, (58, 58, 58))
+    screen.blit(kl, kl.get_rect(centerx=(minus_cx + plus_cx) // 2, top=btn_cy + _CIRC_R + 3))
 
     # ── ESC hint — very subtle ─────────────────────────────────────
     esc = _font(20).render("ESC  quit", True, (46, 46, 46))

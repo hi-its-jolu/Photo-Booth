@@ -8,6 +8,7 @@ from PIL import Image
 
 from config.config import (
     PHOTOS_DIR,
+    ASSETS_DIR,
     THUMB_HEIGHT,
     THUMB_PADDING,
     THUMB_MARGIN_BOTTOM,
@@ -15,6 +16,30 @@ from config.config import (
     GRID_ACTION_BAR_H,
     PREVIEW_SCALE,
 )
+
+_LOGO_PATH = os.path.join(ASSETS_DIR, "logo_wedding.png")
+
+
+def _load_logo_pil(width: int) -> Image.Image | None:
+    """Load the wedding logo as a PIL RGBA image scaled to `width` px."""
+    try:
+        logo = Image.open(_LOGO_PATH).convert("RGBA")
+        h = round(logo.height * width / logo.width)
+        return logo.resize((width, h), Image.LANCZOS)
+    except Exception:
+        return None
+
+
+def _load_logo_surf(width: int) -> pygame.Surface | None:
+    """Load the wedding logo as a pygame SRCALPHA Surface scaled to `width` px."""
+    import io
+    pil = _load_logo_pil(width)
+    if pil is None:
+        return None
+    buf = io.BytesIO()
+    pil.save(buf, format="PNG")
+    buf.seek(0)
+    return pygame.image.load(buf).convert_alpha()
 
 
 def _to_rgb(frame_bgr, flip=True):
@@ -113,8 +138,8 @@ def build_composite_surf(photo_paths: list, screen_w: int, screen_h: int) -> pyg
     comp_w = target_w
     comp_h = 2 * cell_h + gap + 2 * border
 
-    surf = pygame.Surface((comp_w, comp_h))
-    surf.fill((252, 252, 248))
+    surf = pygame.Surface((comp_w, comp_h), pygame.SRCALPHA)
+    surf.fill((252, 252, 248, 255))
 
     offsets = [
         (border,              border),
@@ -135,6 +160,14 @@ def build_composite_surf(photo_paths: list, screen_w: int, screen_h: int) -> pyg
         cx, cy  = (nw - cell_w) // 2, (nh - cell_h) // 2
         cell_img = img_rgb[cy:cy + cell_h, cx:cx + cell_w]
         surf.blit(pygame.surfarray.make_surface(cell_img.swapaxes(0, 1)), offsets[i])
+
+    # ── Wedding logo centered over the 2×2 cross ──────────────────
+    logo_w  = max(int(comp_w * 0.44), 80)
+    logo_surf = _load_logo_surf(logo_w)
+    if logo_surf is not None:
+        lx = (comp_w  - logo_surf.get_width())  // 2
+        ly = (comp_h  - logo_surf.get_height()) // 2
+        surf.blit(logo_surf, (lx, ly))
 
     return surf
 
@@ -193,6 +226,13 @@ def build_print_image(photo_paths: list) -> Image.Image:
         cx, cy = (nw - cell_w) // 2, (nh - cell_h) // 2
         cell_arr = rgb[cy:cy + cell_h, cx:cx + cell_w]
         img.paste(Image.fromarray(cell_arr), offsets[i])
+
+    # ── Wedding logo centered over the 2×2 cross ──────────────────
+    logo = _load_logo_pil(int(PAP_W * 0.44))   # ~396 px wide at 300 DPI
+    if logo is not None:
+        lx = (PAP_W - logo.width)  // 2
+        ly = (PAP_H - logo.height) // 2
+        img.paste(logo, (lx, ly), mask=logo)   # alpha-composite
 
     return img
 
