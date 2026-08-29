@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/modernist-ee49374e-2a5b-44ae-93b8-4f6fca94a51e/styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap">
+<script src="_ds/modernist-ee49374e-2a5b-44ae-93b8-4f6fca94a51e/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#e7e5e1;font-family:Archivo,system-ui,sans-serif}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent)}
+@keyframes urgentflash{0%,49%{opacity:1}50%,100%{opacity:.18}}
+@keyframes ledpulse{0%,49%{opacity:1}50%,100%{opacity:.35}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes softpulse{0%,100%{opacity:1}50%{opacity:.55}}
+.dv-turn{padding:40px 44px 32px;border-bottom:2px solid #201e1d}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:700 10px ui-monospace,Menlo,monospace;padding:4px 8px;background:#201e1d;color:#fff;text-decoration:none;letter-spacing:.08em}
+.dv-tname{font:600 13px/1.2 Archivo,sans-serif;color:#201e1d;letter-spacing:.02em}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px}
+.dv-oid{font:700 10.5px ui-monospace,Menlo,monospace;padding:4px 8px;background:rgba(32,30,29,.1);color:#201e1d;text-decoration:none;letter-spacing:.08em}
+.dv-olabel{display:flex;align-items:baseline;gap:10px;font:400 12px/1.3 Archivo,sans-serif;color:rgba(32,30,29,.6);max-width:1920px}
+.dv-card{width:1920px;height:1080px;overflow:hidden;border:2px solid #201e1d;position:relative}
+.dv-opt:target .dv-oid{background:#ec3013;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.6 Archivo,sans-serif;color:rgba(32,30,29,.55)}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Home / idle screen — live mirrored feed + carousel of past photos, in <a class="dv-oid" href="#1d">1d</a>'s language</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Recreation of today's idle screen — full-bleed mirrored feed, 180px carousel strip on a 160-alpha black scrim, hint line above it (<code>render_idle</code>, <code>CAROUSEL_STRIP_HEIGHT</code> 180 / <code>CAROUSEL_PADDING</code> 14).</div>
+<div class="dv-card" style="background:#121212;font-family:'DejaVu Sans',Verdana,sans-serif">
+  <img src="assets/p2.jpg" style="position:absolute;inset:0;width:1920px;height:1080px;object-fit:cover;transform:scaleX(-1)">
+  <div style="position:absolute;left:0;top:872px;width:1920px;text-align:center;font-size:35px;color:#dcdcdc">Press SPACE to start  ·  ESC to quit</div>
+  <div style="position:absolute;left:0;top:900px;width:1920px;height:180px;background:rgba(0,0,0,.63);overflow:hidden">
+    <div style="display:flex;gap:14px;width:5136px;animation:marquee 34s linear infinite">
+      <img src="assets/p1.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p2.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p3.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p4.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p2.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p1.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p4.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p3.jpg" style="width:320px;height:180px;object-fit:cover">
+      <img src="assets/p1.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p2.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p3.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p4.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p2.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p1.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p4.jpg" style="width:320px;height:180px;object-fit:cover"><img src="assets/p3.jpg" style="width:320px;height:180px;object-fit:cover">
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Ruled window. The feed is a framed viewfinder with the logo above it, the carousel is a labelled strip on the bottom rail, and the only action is one green cap — same rail geometry as <a class="dv-oid" href="#1d">1d</a> so home and preview feel like one machine.</div>
+<div class="dv-card" style="background:var(--color-bg);color:var(--color-text)">
+  <div style="position:absolute;left:56px;top:40px;display:flex;align-items:center;justify-content:space-between;width:1808px">
+    <img src="assets/logo_wedding.png" style="height:104px">
+    <div style="display:flex;align-items:center;gap:14px;font-size:19px;font-weight:700;letter-spacing:.2em;color:var(--color-neutral-600)">
+      <div style="width:14px;height:14px;background:var(--color-accent);animation:softpulse 1.8s ease-in-out infinite"></div>LIVE
+    </div>
+  </div>
+  <div style="position:absolute;left:56px;top:170px;width:1808px;height:2px;background:var(--color-text)"></div>
+
+  <div style="position:absolute;left:56px;top:212px;width:1808px;height:560px;display:grid;place-items:center">
+    <div style="width:996px;height:560px;border:2px solid var(--color-text);background:#000;padding:0;box-sizing:border-box;position:relative;overflow:hidden">
+      <img src="assets/p3.jpg" style="width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(-1)">
+      <div style="position:absolute;left:0;top:0;width:44px;height:2px;background:#fff"></div><div style="position:absolute;left:0;top:0;width:2px;height:44px;background:#fff"></div>
+      <div style="position:absolute;right:0;top:0;width:44px;height:2px;background:#fff"></div><div style="position:absolute;right:0;top:0;width:2px;height:44px;background:#fff"></div>
+      <div style="position:absolute;left:0;bottom:0;width:44px;height:2px;background:#fff"></div><div style="position:absolute;left:0;bottom:0;width:2px;height:44px;background:#fff"></div>
+      <div style="position:absolute;right:0;bottom:0;width:44px;height:2px;background:#fff"></div><div style="position:absolute;right:0;bottom:0;width:2px;height:44px;background:#fff"></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:56px;top:800px;width:1808px;display:flex;align-items:baseline;justify-content:space-between">
+    <div style="font-size:18px;font-weight:700;letter-spacing:.22em;color:var(--color-neutral-600)">EARLIER TONIGHT</div>
+    <div style="font-size:18px;font-weight:700;letter-spacing:.22em;color:var(--color-neutral-600)">312 PHOTOS SO FAR</div>
+  </div>
+  <div style="position:absolute;left:56px;top:836px;width:1808px;height:132px;overflow:hidden;border-top:2px solid var(--color-text);border-bottom:2px solid var(--color-text)">
+    <div style="display:flex;gap:12px;width:3776px;animation:marquee 40s linear infinite;padding-top:6px">
+      <img src="assets/p1.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p4.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p2.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p3.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p1.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p2.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p4.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p3.jpg" style="width:224px;height:126px;object-fit:cover">
+      <img src="assets/p1.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p4.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p2.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p3.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p1.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p2.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p4.jpg" style="width:224px;height:126px;object-fit:cover"><img src="assets/p3.jpg" style="width:224px;height:126px;object-fit:cover">
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;top:988px;width:1920px;height:92px;box-sizing:border-box;padding:0 56px;background:var(--color-neutral-200);border-top:2px solid var(--color-text);display:flex;align-items:center;justify-content:space-between">
+    <div style="font-size:30px;font-weight:800;letter-spacing:.01em">PRESS THE GREEN BUTTON — 4 PHOTOS, ABOUT 30 SECONDS</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="width:58px;height:58px;border-radius:50%;background:#3f9b4f;border:2px solid var(--color-text);box-shadow:0 4px 0 #256034;animation:softpulse 1.6s ease-in-out infinite"></div>
+      <div style="font-size:22px;font-weight:800;letter-spacing:.16em">START</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Poster. Feed runs full-bleed behind a flush-left red statement — visible from across the room — with the carousel as a thin ticker on the very bottom edge and the green cap called out inline.</div>
+<div class="dv-card" style="background:#141312;color:#f3f2f2">
+  <img src="assets/p4.jpg" style="position:absolute;inset:0;width:1920px;height:1080px;object-fit:cover;transform:scaleX(-1)">
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,19,18,.86) 0%,rgba(20,19,18,.72) 44%,rgba(20,19,18,.1) 78%)"></div>
+
+  <div style="position:absolute;left:56px;top:56px;display:flex;align-items:center;gap:14px;font-size:19px;font-weight:700;letter-spacing:.2em;color:#cfccc9">
+    <div style="width:14px;height:14px;background:var(--color-accent);animation:softpulse 1.8s ease-in-out infinite"></div>LIVE VIEW
+  </div>
+  <img src="assets/logo_wedding.png" style="position:absolute;right:56px;top:44px;height:112px;filter:invert(1) grayscale(1) contrast(1.4)">
+
+  <div style="position:absolute;left:56px;top:300px;width:1080px">
+    <div style="width:112px;height:8px;background:var(--color-accent);margin-bottom:34px"></div>
+    <div style="font-size:132px;font-weight:800;line-height:.92;letter-spacing:-.03em">STEP IN.<br>PRESS GREEN.</div>
+    <div style="margin-top:32px;font-size:34px;font-weight:600;color:#cfccc9;max-width:820px;text-wrap:pretty">Four photos, one printed strip, and a QR code to take the originals home.</div>
+    <div style="margin-top:44px;display:flex;align-items:center;gap:22px">
+      <div style="width:104px;height:104px;border-radius:50%;background:#3f9b4f;border:2px solid #0d2c15;box-shadow:0 6px 0 #256034;animation:softpulse 1.6s ease-in-out infinite"></div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:.16em;line-height:1.4">THE BIG GREEN BUTTON<br><span style="color:#a8a5a2;letter-spacing:.2em;font-weight:700;font-size:20px">BELOW THIS SCREEN</span></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;bottom:0;width:1920px;height:150px;background:rgba(20,19,18,.82);border-top:2px solid #f3f2f2;overflow:hidden">
+    <div style="position:absolute;left:24px;top:12px;font-size:17px;font-weight:700;letter-spacing:.22em;color:#a8a5a2;z-index:1">EARLIER TONIGHT</div>
+    <div style="display:flex;gap:10px;width:3320px;animation:marquee 44s linear infinite;padding-top:44px">
+      <img src="assets/p2.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p3.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p1.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p4.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p3.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p1.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p2.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p4.jpg" style="width:196px;height:110px;object-fit:cover">
+      <img src="assets/p2.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p3.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p1.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p4.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p3.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p1.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p2.jpg" style="width:196px;height:110px;object-fit:cover"><img src="assets/p4.jpg" style="width:196px;height:110px;object-fit:cover">
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "keep <a class="dv-oid" href="#2b">2b</a> but make the viewfinder full-bleed" · "add the countdown / capture screens in <a class="dv-oid" href="#2c">2c</a>'s voice" · "the live feed placeholder should be a real webcam frame"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Preview phase — 1920×1080, 4 photos, stepper qty, QR bottom-centre, countdown top-left</span></div>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Recreation of what runs today — geometry, colours and type lifted from <code>screens.py</code> / <code>composite.py</code> (GRID_PAD 20, bar 90px, blue PRINT / red RETAKE, QR 110px). Baseline to react against.</div>
+<div class="dv-card" style="background:#121212;font-family:'DejaVu Sans',Verdana,sans-serif">
+  <div style="position:absolute;left:76px;top:20px;width:818px;height:460px;background:#000"></div>
+  <img src="assets/p1.jpg" style="position:absolute;left:76px;top:20px;width:818px;height:460px;object-fit:cover;box-sizing:border-box;border:2px solid #d2d2d2">
+  <div style="position:absolute;left:1031px;top:25px;width:818px;height:460px;background:#000"></div>
+  <img src="assets/p2.jpg" style="position:absolute;left:1026px;top:20px;width:818px;height:460px;object-fit:cover;box-sizing:border-box;border:2px solid #d2d2d2">
+  <div style="position:absolute;left:81px;top:505px;width:818px;height:460px;background:#000"></div>
+  <img src="assets/p3.jpg" style="position:absolute;left:76px;top:500px;width:818px;height:460px;object-fit:cover;box-sizing:border-box;border:2px solid #d2d2d2">
+  <div style="position:absolute;left:1031px;top:505px;width:818px;height:460px;background:#000"></div>
+  <img src="assets/p4.jpg" style="position:absolute;left:1026px;top:500px;width:818px;height:460px;object-fit:cover;box-sizing:border-box;border:2px solid #d2d2d2">
+  <img src="assets/logo_wedding.png" style="position:absolute;left:691px;top:410px;width:537px">
+  <div style="position:absolute;left:18px;top:14px;font-size:14px;color:#505050">returning in</div>
+  <div style="position:absolute;left:18px;top:40px;font-size:46px;line-height:1;color:{{ tColor }};animation:{{ tFlash }}">{{ secs }}</div>
+  <div style="position:absolute;left:18px;top:100px;width:80px;height:4px;background:#323232;border-radius:2px"></div>
+  <div style="position:absolute;left:18px;top:100px;width:{{ barPx }};height:4px;background:{{ tColor }};border-radius:2px"></div>
+  <div style="position:absolute;left:0;top:826px;width:1920px;text-align:center;font-size:14px;color:#646464">Scan to download</div>
+  <div style="position:absolute;left:905px;top:850px;width:110px;height:110px;background:#fff;display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr)">
+    <div style="grid-area:1/1/4/4;border:6px solid #000;background:#fff"></div>
+    <div style="grid-area:1/9/4/12;border:6px solid #000;background:#fff"></div>
+    <div style="grid-area:9/1/12/4;border:6px solid #000;background:#fff"></div>
+    <div style="grid-area:5/5/8/8;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/10px 10px"></div>
+    <div style="grid-area:1/5/4/8;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/10px 10px"></div>
+    <div style="grid-area:5/1/8/4;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/10px 10px"></div>
+    <div style="grid-area:9/6/12/12;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/10px 10px"></div>
+    <div style="grid-area:5/9/8/12;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/10px 10px"></div>
+  </div>
+  <div style="position:absolute;left:0;top:990px;width:1920px;height:90px;background:#181818;border-top:1px solid #343434"></div>
+  <div style="position:absolute;left:28px;top:1008px;width:54px;height:54px;border-radius:50%;background:#444;border:2px solid #646464;display:grid;place-items:center">
+    <div style="width:0;height:0;border-top:11px solid transparent;border-bottom:11px solid transparent;border-right:13px solid #cdcdcd"></div>
+  </div>
+  <div style="position:absolute;left:96px;top:1035px;transform:translateY(-50%);font-size:39px;color:#fff">{{ qty }}</div>
+  <div style="position:absolute;left:130px;top:1037px;transform:translateY(-50%);font-size:19px;color:#787878">{{ qtyWord }}</div>
+  <div style="position:absolute;left:213px;top:1008px;width:54px;height:54px;border-radius:50%;background:#444;border:2px solid #646464;display:grid;place-items:center">
+    <div style="width:0;height:0;border-top:11px solid transparent;border-bottom:11px solid transparent;border-left:13px solid #cdcdcd"></div>
+  </div>
+  <div style="position:absolute;left:0;top:1067px;width:295px;text-align:center;font-size:14px;color:#3a3a3a">&lt; &gt;</div>
+  <div style="position:absolute;left:1518px;top:1006px;width:172px;height:58px;background:#af2323;border:2px solid #d74444;border-radius:10px;display:grid;place-items:center;font-size:29px;color:#fff">RETAKE</div>
+  <div style="position:absolute;left:1526px;top:1012px;font-size:15px;color:#ffa0a0">DEL</div>
+  <div style="position:absolute;left:1702px;top:1006px;width:190px;height:58px;background:#1c62c3;border:2px solid #3c87eb;border-radius:10px;display:grid;place-items:center;font-size:29px;color:#fff">PRINT</div>
+  <div style="position:absolute;left:1710px;top:1012px;font-size:15px;color:#8cbeff">P</div>
+  <div style="position:absolute;right:10px;bottom:5px;font-size:14px;color:#2e2e2e">ESC  quit</div>
+</div>
+</div>
+
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Modernist, light ground. The preview <em>is</em> the 4×6 sheet that comes out of the printer — one white print object, ruled, centred, nothing overlapping it. Actions are ruled cells: copies · scan · print/discard.</div>
+<div class="dv-card" style="background:var(--color-bg);color:var(--color-text)">
+  <div style="position:absolute;left:0;top:0;width:1920px;height:168px;box-sizing:border-box;padding:44px 56px 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid var(--color-text)">
+    <div style="display:flex;align-items:flex-end;gap:22px">
+      <div>
+        <div style="font-size:19px;font-weight:600;letter-spacing:.22em;color:var(--color-neutral-600)">RETURNING IN</div>
+        <div style="display:flex;align-items:baseline;gap:10px;color:{{ tColor2 }};animation:{{ tFlash }}">
+          <div style="font-size:82px;font-weight:800;line-height:.9;letter-spacing:-.02em">{{ secs2 }}</div>
+          <div style="font-size:24px;font-weight:600;letter-spacing:.14em">SEC</div>
+        </div>
+      </div>
+      <div style="width:220px;height:10px;background:var(--color-neutral-300);margin-bottom:10px">
+        <div style="width:{{ barPct }};height:10px;background:{{ tColor2 }}"></div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:19px;font-weight:600;letter-spacing:.22em;color:var(--color-neutral-600)">PREVIEW</div>
+      <div style="font-size:34px;font-weight:700;letter-spacing:-.01em">4 FRAMES · 1 SHEET</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;top:168px;width:1920px;height:672px;display:grid;place-items:center">
+    <div style="display:flex;align-items:flex-end;gap:28px">
+      <div style="width:876px;height:584px;background:#fff;border:2px solid var(--color-text);box-sizing:border-box;padding:18px;position:relative">
+        <div style="width:100%;height:100%;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px">
+          <img src="assets/p1.jpg" style="width:100%;height:100%;object-fit:cover">
+          <img src="assets/p2.jpg" style="width:100%;height:100%;object-fit:cover">
+          <img src="assets/p3.jpg" style="width:100%;height:100%;object-fit:cover">
+          <img src="assets/p4.jpg" style="width:100%;height:100%;object-fit:cover">
+        </div>
+        <img src="assets/logo_wedding.png" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:300px">
+      </div>
+      <div style="writing-mode:vertical-rl;font-size:18px;font-weight:600;letter-spacing:.26em;color:var(--color-neutral-600);height:584px;display:flex;align-items:flex-start">4×6 IN · GLOSS</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;top:840px;width:1920px;height:240px;box-sizing:border-box;border-top:2px solid var(--color-text);display:grid;grid-template-columns:1fr 1fr 1fr">
+    <div style="box-sizing:border-box;padding:34px 56px;display:flex;flex-direction:column;justify-content:space-between">
+      <div style="font-size:19px;font-weight:600;letter-spacing:.22em;color:var(--color-neutral-600)">COPIES TO PRINT</div>
+      <div style="display:flex;align-items:center;gap:20px">
+        <div style="width:84px;height:84px;background:var(--color-neutral-200);border:2px solid var(--color-text);display:grid;place-items:center">
+          <div style="width:34px;height:6px;background:var(--color-text)"></div>
+        </div>
+        <div style="width:96px;text-align:center;font-size:72px;font-weight:800;line-height:1">{{ qty }}</div>
+        <div style="width:84px;height:84px;background:var(--color-neutral-200);border:2px solid var(--color-text);display:grid;place-items:center;position:relative">
+          <div style="width:34px;height:6px;background:var(--color-text)"></div>
+          <div style="position:absolute;width:6px;height:34px;background:var(--color-text)"></div>
+        </div>
+        <div style="font-size:17px;font-weight:600;letter-spacing:.16em;color:var(--color-neutral-600);line-height:1.5">GREY<br>BUTTONS</div>
+      </div>
+    </div>
+
+    <div style="box-sizing:border-box;padding:30px 24px;border-left:2px solid var(--color-text);border-right:2px solid var(--color-text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+      <div style="width:148px;height:148px;background:#fff;border:2px solid var(--color-text);box-sizing:border-box;padding:8px;display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr)">
+        <div style="grid-area:1/1/4/4;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:1/9/4/12;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:9/1/12/4;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:5/5/8/8;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:1/5/4/8;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:5/1/8/4;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:9/6/12/12;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:5/9/8/12;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+      </div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:.2em">SCAN TO DOWNLOAD</div>
+    </div>
+
+    <div style="box-sizing:border-box;padding:34px 56px 34px 40px;display:flex;flex-direction:column;gap:14px;justify-content:center">
+      <div style="height:84px;background:var(--color-accent);color:#fff;display:flex;align-items:center;gap:18px;padding:0 22px">
+        <div style="width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.35)"></div>
+        <div style="font-size:34px;font-weight:800;letter-spacing:.02em;white-space:nowrap">PRINT {{ qty }} {{ qtyWordUpper }}</div>
+      </div>
+      <div style="height:84px;background:var(--color-text);color:#fff;display:flex;align-items:center;gap:18px;padding:0 22px">
+        <div style="width:26px;height:26px;border-radius:50%;background:var(--color-neutral-500);box-shadow:0 0 0 4px rgba(255,255,255,.18)"></div>
+        <div style="font-size:34px;font-weight:800;letter-spacing:.02em;white-space:nowrap">DISCARD</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Dark Modernist. Photos run near-full-bleed as a ruled 2×2 field — biggest possible frames — with all chrome pushed into a 56px black margin and a bottom rail. Countdown is a plate, not floating text.</div>
+<div class="dv-card" style="background:#141312;color:#f3f2f2">
+  <div style="position:absolute;left:0;top:0;width:1920px;height:112px;box-sizing:border-box;padding:0 40px 0 0;display:flex;justify-content:space-between;align-items:stretch">
+    <div style="display:flex;align-items:center;gap:0;background:{{ tPlate }};animation:{{ tFlash }};padding:0 34px 0 40px;color:{{ tPlateInk }}">
+      <div style="font-size:76px;font-weight:800;line-height:1;letter-spacing:-.02em">{{ secs2 }}</div>
+      <div style="font-size:18px;font-weight:700;letter-spacing:.2em;margin-left:16px;line-height:1.35">SEC UNTIL<br>RESET</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:36px;font-size:19px;font-weight:600;letter-spacing:.2em;color:#7b7876">
+      <div>SESSION 214</div>
+      <div style="display:flex;align-items:center;gap:12px"><div style="width:14px;height:14px;background:#5ac26a"></div>PRINTER READY · 42 SHEETS</div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:56px;top:112px;width:1808px;height:648px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:#f3f2f2">
+    <div style="position:relative;overflow:hidden"><img src="assets/p1.jpg" style="width:100%;height:100%;object-fit:cover;display:block"><div style="position:absolute;left:16px;bottom:12px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)">01</div></div>
+    <div style="position:relative;overflow:hidden"><img src="assets/p2.jpg" style="width:100%;height:100%;object-fit:cover;display:block"><div style="position:absolute;left:16px;bottom:12px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)">02</div></div>
+    <div style="position:relative;overflow:hidden"><img src="assets/p3.jpg" style="width:100%;height:100%;object-fit:cover;display:block"><div style="position:absolute;left:16px;bottom:12px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)">03</div></div>
+    <div style="position:relative;overflow:hidden"><img src="assets/p4.jpg" style="width:100%;height:100%;object-fit:cover;display:block"><div style="position:absolute;left:16px;bottom:12px;font-size:20px;font-weight:800;letter-spacing:.2em;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7)">04</div></div>
+  </div>
+
+  <div style="position:absolute;left:56px;top:790px;width:1808px;height:2px;background:#3a3735"></div>
+
+  <div style="position:absolute;left:56px;top:824px;width:1808px;height:200px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+    <div style="display:flex;align-items:center;gap:22px">
+      <div style="font-size:18px;font-weight:700;letter-spacing:.2em;color:#7b7876;line-height:1.4">COPIES<br><span style="color:#f3f2f2">MAX {{ qtyMax }}</span></div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div style="width:80px;height:80px;border:2px solid #6d6a67;display:grid;place-items:center"><div style="width:32px;height:6px;background:#f3f2f2"></div></div>
+        <div style="width:88px;text-align:center;font-size:68px;font-weight:800;line-height:1">{{ qty }}</div>
+        <div style="width:80px;height:80px;border:2px solid #6d6a67;display:grid;place-items:center;position:relative"><div style="width:32px;height:6px;background:#f3f2f2"></div><div style="position:absolute;width:6px;height:32px;background:#f3f2f2"></div></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div style="width:132px;height:132px;background:#fff;box-sizing:border-box;padding:8px;display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr)">
+        <div style="grid-area:1/1/4/4;border:6px solid #141312;background:#fff"></div>
+        <div style="grid-area:1/9/4/12;border:6px solid #141312;background:#fff"></div>
+        <div style="grid-area:9/1/12/4;border:6px solid #141312;background:#fff"></div>
+        <div style="grid-area:5/5/8/8;background:repeating-conic-gradient(#141312 0 25%,#fff 0 50%) 0 0/11px 11px"></div>
+        <div style="grid-area:1/5/4/8;background:repeating-conic-gradient(#141312 0 25%,#fff 0 50%) 0 0/11px 11px"></div>
+        <div style="grid-area:5/1/8/4;background:repeating-conic-gradient(#141312 0 25%,#fff 0 50%) 0 0/11px 11px"></div>
+        <div style="grid-area:9/6/12/12;background:repeating-conic-gradient(#141312 0 25%,#fff 0 50%) 0 0/11px 11px"></div>
+        <div style="grid-area:5/9/8/12;background:repeating-conic-gradient(#141312 0 25%,#fff 0 50%) 0 0/11px 11px"></div>
+      </div>
+      <div style="font-size:19px;font-weight:700;letter-spacing:.2em;color:#b6b3b0">SCAN TO DOWNLOAD</div>
+    </div>
+    <div style="display:flex;gap:16px;justify-content:flex-end">
+      <div style="width:300px;height:96px;border:2px solid #6d6a67;color:#f3f2f2;display:flex;align-items:center;gap:16px;padding:0 20px;box-sizing:border-box">
+        <div style="width:22px;height:22px;border-radius:50%;background:#6d6a67"></div>
+        <div style="font-size:32px;font-weight:800;white-space:nowrap">DISCARD</div>
+      </div>
+      <div style="width:392px;height:96px;background:var(--color-accent);color:#fff;display:flex;align-items:center;gap:16px;padding:0 20px;box-sizing:border-box">
+        <div style="width:22px;height:22px;border-radius:50%;background:#fff;animation:ledpulse 1.6s steps(1,end) infinite"></div>
+        <div style="font-size:32px;font-weight:800;white-space:nowrap">PRINT {{ qty }} {{ qtyWordUpper }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Hardware-mapped. The bottom rail draws the arcade panel itself — same order, same colours, same size as the caps under the screen — so nobody reads a label to know what to press. Suggested caps: <strong>red = print</strong>, <strong>black = discard</strong>, <strong>white = − / +</strong>.</div>
+<div class="dv-card" style="background:var(--color-bg);color:var(--color-text)">
+  <div style="position:absolute;left:56px;top:44px;display:flex;align-items:center;gap:18px">
+    <div style="width:112px;height:112px;background:{{ tPlate }};animation:{{ tFlash }};color:{{ tPlateInk }};display:grid;place-items:center;font-size:60px;font-weight:800;line-height:1">{{ secs2 }}</div>
+    <div style="font-size:19px;font-weight:700;letter-spacing:.2em;color:var(--color-neutral-600);line-height:1.45">SECONDS TO DECIDE<br><span style="color:var(--color-text)">PRINT IT OR LET IT GO</span></div>
+  </div>
+  <div style="position:absolute;left:56px;top:184px;width:1808px;height:2px;background:var(--color-text)"></div>
+
+  <div style="position:absolute;left:56px;top:228px;width:1808px;height:568px;display:grid;place-items:center">
+    <div style="position:relative;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:22px;width:1000px;height:568px">
+      <img src="assets/logo_wedding.png" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:340px;z-index:1;pointer-events:none">
+      <div style="border:2px solid var(--color-text);padding:10px;background:#fff;box-sizing:border-box"><img src="assets/p1.jpg" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+      <div style="border:2px solid var(--color-text);padding:10px;background:#fff;box-sizing:border-box"><img src="assets/p2.jpg" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+      <div style="border:2px solid var(--color-text);padding:10px;background:#fff;box-sizing:border-box"><img src="assets/p3.jpg" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+      <div style="border:2px solid var(--color-text);padding:10px;background:#fff;box-sizing:border-box"><img src="assets/p4.jpg" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:0;top:836px;width:1920px;height:244px;box-sizing:border-box;border-top:2px solid var(--color-text);background:var(--color-neutral-200);padding:0 56px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center">
+    <div style="display:flex;align-items:center;gap:26px">
+      <div style="display:flex;align-items:flex-end;gap:14px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="width:96px;height:96px;border-radius:50%;background:#fff;border:2px solid var(--color-text);box-shadow:0 6px 0 var(--color-neutral-400);display:grid;place-items:center"><div style="width:38px;height:7px;background:var(--color-text)"></div></div>
+          <div style="font-size:17px;font-weight:700;letter-spacing:.16em;color:var(--color-neutral-700)">FEWER</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+          <div style="width:96px;height:96px;border-radius:50%;background:#fff;border:2px solid var(--color-text);box-shadow:0 6px 0 var(--color-neutral-400);display:grid;place-items:center;position:relative"><div style="width:38px;height:7px;background:var(--color-text)"></div><div style="position:absolute;width:7px;height:38px;background:var(--color-text)"></div></div>
+          <div style="font-size:17px;font-weight:700;letter-spacing:.16em;color:var(--color-neutral-700)">MORE</div>
+        </div>
+      </div>
+      <div style="border-left:2px solid var(--color-text);padding-left:26px">
+        <div style="font-size:18px;font-weight:700;letter-spacing:.2em;color:var(--color-neutral-600)">COPIES</div>
+        <div style="display:flex;align-items:baseline;gap:10px"><div style="font-size:76px;font-weight:800;line-height:1">{{ qty }}</div><div style="font-size:24px;font-weight:700;letter-spacing:.12em;color:var(--color-neutral-700)">{{ qtyWordUpper }}</div></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+      <div style="width:140px;height:140px;background:#fff;border:2px solid var(--color-text);box-sizing:border-box;padding:8px;display:grid;grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr)">
+        <div style="grid-area:1/1/4/4;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:1/9/4/12;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:9/1/12/4;border:7px solid #201e1d;background:#fff"></div>
+        <div style="grid-area:5/5/8/8;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:1/5/4/8;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:5/1/8/4;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:9/6/12/12;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+        <div style="grid-area:5/9/8/12;background:repeating-conic-gradient(#201e1d 0 25%,#fff 0 50%) 0 0/12px 12px"></div>
+      </div>
+      <div style="font-size:19px;font-weight:700;letter-spacing:.2em">SCAN TO DOWNLOAD</div>
+    </div>
+
+    <div style="display:flex;align-items:flex-end;gap:28px;justify-content:flex-end">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="width:112px;height:112px;border-radius:50%;background:var(--color-text);border:2px solid var(--color-text);box-shadow:0 6px 0 var(--color-neutral-500);display:grid;place-items:center"><div style="width:44px;height:44px;position:relative"><div style="position:absolute;top:19px;width:44px;height:6px;background:#fff;transform:rotate(45deg)"></div><div style="position:absolute;top:19px;width:44px;height:6px;background:#fff;transform:rotate(-45deg)"></div></div></div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:.16em">DISCARD</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+        <div style="width:148px;height:148px;border-radius:50%;background:var(--color-accent);border:2px solid var(--color-accent-700);box-shadow:0 8px 0 var(--color-accent-700);display:grid;place-items:center;color:#fff;font-size:30px;font-weight:800;letter-spacing:.06em">PRINT</div>
+        <div style="font-size:19px;font-weight:800;letter-spacing:.16em;white-space:nowrap">PRINT {{ qty }} {{ qtyWordUpper }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "take <a class="dv-oid" href="#1b">1b</a> but with <a class="dv-oid" href="#1d">1d</a>'s button caps" · "show me the printing + discard-confirm states for <a class="dv-oid" href="#1c">1c</a>" · "make <a class="dv-oid" href="#1b">1b</a> portrait"</p>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;countdownFrom&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:25,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:5,&quot;max&quot;:90,&quot;unit&quot;:&quot;s&quot;,&quot;section&quot;:&quot;Timer&quot;},&quot;urgentAt&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:10,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:3,&quot;max&quot;:30,&quot;unit&quot;:&quot;s&quot;,&quot;section&quot;:&quot;Timer&quot;},&quot;qtyMax&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:4,&quot;tsType&quot;:&quot;number&quot;,&quot;min&quot;:1,&quot;max&quot;:8,&quot;section&quot;:&quot;Printing&quot;}}">
+class Component extends DCLogic {
+  state = { t: 25, qty: 2 };
+  componentDidMount() {
+    this.iv = setInterval(() => {
+      this.setState(s => ({ t: s.t <= 0 ? (this.props.countdownFrom ?? 25) : s.t - 1 }));
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.iv); }
+  renderVals() {
+    const from = this.props.countdownFrom ?? 25;
+    const qtyMax = this.props.qtyMax ?? 4;
+    const t = Math.min(this.state.t, from);
+    const urgent = t <= (this.props.urgentAt ?? 10);
+    const qty = Math.min(this.state.qty, qtyMax);
+    const flash = urgent ? 'urgentflash .7s steps(1,end) infinite' : 'none';
+    return {
+      secs: t, secs2: String(t).padStart(2, '0'),
+      barPx: Math.max(0, Math.round(80 * t / from)) + 'px',
+      barPct: Math.max(0, Math.round(100 * t / from)) + '%',
+      tColor: urgent ? '#dc4646' : '#8c8c8c',
+      tColor2: urgent ? 'var(--color-accent)' : 'var(--color-text)',
+      tPlate: urgent ? 'var(--color-accent)' : 'var(--color-text)',
+      tPlateInk: '#f3f2f2',
+      tFlash: flash,
+      qty, qtyMax,
+      qtyWord: qty === 1 ? 'copy' : 'copies',
+      qtyWordUpper: qty === 1 ? 'COPY' : 'COPIES'
+    };
+  }
+}
+</script>
+</body>
+</html>
