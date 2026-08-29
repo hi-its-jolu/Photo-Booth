@@ -10,7 +10,10 @@ from config.config import (
     GROUND, INK, ACCENT, ACCENT_DARK, NEUTRAL_200, NEUTRAL_400, NEUTRAL_500,
     NEUTRAL_600, NEUTRAL_700, GREEN, GREEN_DARK, WHITE,
 )
-from composite import REVIEW_GRID_W, REVIEW_GRID_H, REVIEW_GRID_Y, REVIEW_MAT_PAD
+from composite import (
+    REVIEW_GRID_W, REVIEW_GRID_H, REVIEW_GRID_Y, REVIEW_MAT_PAD,
+    fit_scale, scale_px,
+)
 
 # ── UI text constants ─────────────────────────────────────────────────────────
 _TXT_PRINTING     = "Printing…"
@@ -176,9 +179,9 @@ _IDLE_RAIL_H      = 92
 _IDLE_START_D     = 58
 _IDLE_START_DROP  = 4
 
-# Interior size the live camera feed should be captured/cropped to for the
-# viewfinder box (box size minus the 2px border on each side).
-IDLE_VIEWFINDER_INNER = (_IDLE_VF_W - _IDLE_VF_BORDER * 2, _IDLE_VF_H - _IDLE_VF_BORDER * 2)
+# Carousel thumbnail height at design scale: strip height minus the top inset,
+# flush to the strip's bottom rule (132 - 6 = 126).
+IDLE_THUMB_H = CAROUSEL_STRIP_HEIGHT - _IDLE_STRIP_INSET
 
 _TXT_LIVE    = "LIVE"
 _TXT_EARLIER = "EARLIER TONIGHT"
@@ -186,15 +189,24 @@ _TXT_START   = "START"
 _TXT_PRESS   = "PRESS THE GREEN BUTTON — {n} PHOTOS, ABOUT 30 SECONDS"
 
 
-def _draw_idle_header(screen, now: float, screen_w: int):
-    logo = _get_logo_by_height(_IDLE_LOGO_H)
-    if logo is not None:
-        screen.blit(logo, (_IDLE_MARGIN, _IDLE_HEADER_Y))
-    row_cy = _IDLE_HEADER_Y + _IDLE_LOGO_H // 2
+def idle_viewfinder_inner(screen_w: int, screen_h: int) -> tuple[int, int]:
+    """Interior size (mirror/cover-crop target) for the idle viewfinder box,
+    scaled to fit screen_w x screen_h."""
+    s = fit_scale(screen_w, screen_h)
+    border = scale_px(_IDLE_VF_BORDER, s)
+    return scale_px(_IDLE_VF_W, s) - border * 2, scale_px(_IDLE_VF_H, s) - border * 2
 
-    live_label = _tracked(700, 19, _TXT_LIVE, NEUTRAL_600, 0.20)
-    dot, gap   = 14, 14
-    label_x    = (screen_w - _IDLE_MARGIN) - live_label.get_width()
+
+def _draw_idle_header(screen, now: float, screen_w: int, s: float):
+    margin, header_y, logo_h = scale_px(_IDLE_MARGIN, s), scale_px(_IDLE_HEADER_Y, s), scale_px(_IDLE_LOGO_H, s)
+    logo = _get_logo_by_height(logo_h)
+    if logo is not None:
+        screen.blit(logo, (margin, header_y))
+    row_cy = header_y + logo_h // 2
+
+    live_label = _tracked(700, scale_px(19, s), _TXT_LIVE, NEUTRAL_600, 0.20)
+    dot, gap   = scale_px(14, s), scale_px(14, s)
+    label_x    = (screen_w - margin) - live_label.get_width()
     dot_x      = label_x - gap - dot
 
     dot_surf = pygame.Surface((dot, dot), pygame.SRCALPHA)
@@ -203,19 +215,22 @@ def _draw_idle_header(screen, now: float, screen_w: int):
     screen.blit(live_label, (label_x, row_cy - live_label.get_height() // 2))
 
 
-def _draw_idle_viewfinder(screen, live_surf, screen_w: int):
-    box_x, box_y = (screen_w - _IDLE_VF_W) // 2, _IDLE_VF_TOP
-    pygame.draw.rect(screen, (0, 0, 0), (box_x, box_y, _IDLE_VF_W, _IDLE_VF_H))
-    if live_surf is not None:
-        screen.blit(live_surf, (box_x + _IDLE_VF_BORDER, box_y + _IDLE_VF_BORDER))
-    pygame.draw.rect(screen, INK, (box_x, box_y, _IDLE_VF_W, _IDLE_VF_H), _IDLE_VF_BORDER)
+def _draw_idle_viewfinder(screen, live_surf, screen_w: int, s: float):
+    box_w, box_h = scale_px(_IDLE_VF_W, s), scale_px(_IDLE_VF_H, s)
+    border       = scale_px(_IDLE_VF_BORDER, s)
+    box_x, box_y = (screen_w - box_w) // 2, scale_px(_IDLE_VF_TOP, s)
 
-    L, T = _IDLE_TICK_LEN, _IDLE_VF_BORDER
+    pygame.draw.rect(screen, (0, 0, 0), (box_x, box_y, box_w, box_h))
+    if live_surf is not None:
+        screen.blit(live_surf, (box_x + border, box_y + border))
+    pygame.draw.rect(screen, INK, (box_x, box_y, box_w, box_h), border)
+
+    L, T = scale_px(_IDLE_TICK_LEN, s), border
     for corner_x, corner_y, sx, sy in [
-        (box_x,               box_y,               1, 1),
-        (box_x + _IDLE_VF_W,  box_y,              -1, 1),
-        (box_x,               box_y + _IDLE_VF_H,  1, -1),
-        (box_x + _IDLE_VF_W,  box_y + _IDLE_VF_H, -1, -1),
+        (box_x,          box_y,          1, 1),
+        (box_x + box_w,  box_y,         -1, 1),
+        (box_x,          box_y + box_h,  1, -1),
+        (box_x + box_w,  box_y + box_h, -1, -1),
     ]:
         hx = corner_x if sx > 0 else corner_x - L
         hy = corner_y if sy > 0 else corner_y - T
@@ -225,69 +240,83 @@ def _draw_idle_viewfinder(screen, live_surf, screen_w: int):
         pygame.draw.rect(screen, (255, 255, 255), (vx, vy, T, L))
 
 
-def _draw_idle_labels(screen, photo_count: int, screen_w: int):
-    left  = _tracked(700, 18, _TXT_EARLIER, NEUTRAL_600, 0.22)
-    right = _tracked(700, 18, f"{photo_count} PHOTOS SO FAR", NEUTRAL_600, 0.22)
-    screen.blit(left,  left.get_rect(left=_IDLE_MARGIN, bottom=_IDLE_LABEL_Y))
-    screen.blit(right, right.get_rect(right=screen_w - _IDLE_MARGIN, bottom=_IDLE_LABEL_Y))
+def _draw_idle_labels(screen, photo_count: int, screen_w: int, s: float):
+    margin = scale_px(_IDLE_MARGIN, s)
+    y      = scale_px(_IDLE_LABEL_Y, s)
+    size   = scale_px(18, s)
+    left   = _tracked(700, size, _TXT_EARLIER, NEUTRAL_600, 0.22)
+    right  = _tracked(700, size, f"{photo_count} PHOTOS SO FAR", NEUTRAL_600, 0.22)
+    screen.blit(left,  left.get_rect(left=margin, bottom=y))
+    screen.blit(right, right.get_rect(right=screen_w - margin, bottom=y))
 
 
-def _draw_idle_carousel(screen, carousel_photos, carousel_start: float, now: float, screen_w: int):
-    left, right = _IDLE_MARGIN, screen_w - _IDLE_MARGIN
-    strip_h = CAROUSEL_STRIP_HEIGHT
-    pygame.draw.line(screen, INK, (left, _IDLE_STRIP_Y), (right, _IDLE_STRIP_Y), 2)
-    pygame.draw.line(screen, INK, (left, _IDLE_STRIP_Y + strip_h), (right, _IDLE_STRIP_Y + strip_h), 2)
+def _draw_idle_carousel(screen, carousel_photos, carousel_start: float, now: float, screen_w: int, s: float):
+    margin      = scale_px(_IDLE_MARGIN, s)
+    left, right = margin, screen_w - margin
+    strip_y     = scale_px(_IDLE_STRIP_Y, s)
+    strip_h     = scale_px(CAROUSEL_STRIP_HEIGHT, s)
+    rule_w      = scale_px(2, s)
+    pygame.draw.line(screen, INK, (left, strip_y), (right, strip_y), rule_w)
+    pygame.draw.line(screen, INK, (left, strip_y + strip_h), (right, strip_y + strip_h), rule_w)
     if not carousel_photos:
         return
 
-    thumb_y   = _IDLE_STRIP_Y + _IDLE_STRIP_INSET
-    total_w   = sum(s.get_width() + CAROUSEL_PADDING for s in carousel_photos)
-    offset    = (CAROUSEL_SCROLL_SPEED * (now - carousel_start)) % total_w
+    thumb_y = strip_y + scale_px(_IDLE_STRIP_INSET, s)
+    pad     = scale_px(CAROUSEL_PADDING, s)
+    speed   = CAROUSEL_SCROLL_SPEED * s
+    total_w = sum(surf.get_width() + pad for surf in carousel_photos)
+    offset  = (speed * (now - carousel_start)) % total_w
+
     prev_clip = screen.get_clip()
-    screen.set_clip(pygame.Rect(left, _IDLE_STRIP_Y, right - left, strip_h))
+    screen.set_clip(pygame.Rect(left, strip_y, right - left, strip_h))
     x = left - offset
     while x < right:
         for surf in carousel_photos:
             if x + surf.get_width() >= left:
                 screen.blit(surf, (int(x), thumb_y))
-            x += surf.get_width() + CAROUSEL_PADDING
+            x += surf.get_width() + pad
             if x >= right:
                 break
     screen.set_clip(prev_clip)
 
 
-def _draw_idle_rail(screen, now: float, screen_w: int, screen_h: int):
-    rail_y = screen_h - _IDLE_RAIL_H
-    pygame.draw.rect(screen, NEUTRAL_200, (0, rail_y, screen_w, _IDLE_RAIL_H))
-    pygame.draw.line(screen, INK, (0, rail_y), (screen_w, rail_y), 2)
-    rail_cy = rail_y + _IDLE_RAIL_H // 2
+def _draw_idle_rail(screen, now: float, screen_w: int, screen_h: int, s: float):
+    rail_h = scale_px(_IDLE_RAIL_H, s)
+    rail_y = screen_h - rail_h
+    margin = scale_px(_IDLE_MARGIN, s)
+    pygame.draw.rect(screen, NEUTRAL_200, (0, rail_y, screen_w, rail_h))
+    pygame.draw.line(screen, INK, (0, rail_y), (screen_w, rail_y), scale_px(2, s))
+    rail_cy = rail_y + rail_h // 2
 
-    press = _archivo(800, 30).render(_TXT_PRESS.format(n=TOTAL_PHOTOS), True, INK)
-    screen.blit(press, press.get_rect(left=_IDLE_MARGIN, centery=rail_cy))
+    press = _archivo(800, scale_px(30, s)).render(_TXT_PRESS.format(n=TOTAL_PHOTOS), True, INK)
+    screen.blit(press, press.get_rect(left=margin, centery=rail_cy))
 
-    start_label   = _tracked(800, 22, _TXT_START, INK, 0.16)
-    d, drop, gap  = _IDLE_START_D, _IDLE_START_DROP, 16
-    cx = (screen_w - _IDLE_MARGIN) - start_label.get_width() - gap - d // 2
+    start_label  = _tracked(800, scale_px(22, s), _TXT_START, INK, 0.16)
+    d, drop, gap = scale_px(_IDLE_START_D, s), scale_px(_IDLE_START_DROP, s), scale_px(16, s)
+    cx = (screen_w - margin) - start_label.get_width() - gap - d // 2
 
     pygame.draw.circle(screen, GREEN_DARK, (cx, rail_cy + drop), d // 2)
     alpha = _pulse_alpha(now, 1.6)
-    cap   = pygame.Surface((d + 4, d + 4), pygame.SRCALPHA)
-    c     = d // 2 + 2
+    pad2  = scale_px(4, s)
+    cap   = pygame.Surface((d + pad2, d + pad2), pygame.SRCALPHA)
+    c     = d // 2 + pad2 // 2
     pygame.draw.circle(cap, (*GREEN, alpha), (c, c), d // 2)
-    pygame.draw.circle(cap, (*INK, alpha),   (c, c), d // 2, 2)
+    pygame.draw.circle(cap, (*INK, alpha),   (c, c), d // 2, scale_px(2, s))
     screen.blit(cap, (cx - c, rail_cy - c))
     screen.blit(start_label, start_label.get_rect(left=cx + d // 2 + gap, centery=rail_cy))
 
 
 def render_idle(screen, live_surf, carousel_photos, carousel_start: float, now: float,
                 photo_count: int, screen_w: int, screen_h: int):
+    s = fit_scale(screen_w, screen_h)
     screen.fill(GROUND)
-    _draw_idle_header(screen, now, screen_w)
-    pygame.draw.line(screen, INK, (_IDLE_MARGIN, _IDLE_RULE_Y), (screen_w - _IDLE_MARGIN, _IDLE_RULE_Y), 2)
-    _draw_idle_viewfinder(screen, live_surf, screen_w)
-    _draw_idle_labels(screen, photo_count, screen_w)
-    _draw_idle_carousel(screen, carousel_photos, carousel_start, now, screen_w)
-    _draw_idle_rail(screen, now, screen_w, screen_h)
+    _draw_idle_header(screen, now, screen_w, s)
+    margin, rule_y = scale_px(_IDLE_MARGIN, s), scale_px(_IDLE_RULE_Y, s)
+    pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
+    _draw_idle_viewfinder(screen, live_surf, screen_w, s)
+    _draw_idle_labels(screen, photo_count, screen_w, s)
+    _draw_idle_carousel(screen, carousel_photos, carousel_start, now, screen_w, s)
+    _draw_idle_rail(screen, now, screen_w, screen_h, s)
 
 
 # ── Countdown screen ──────────────────────────────────────────────────────────
@@ -323,7 +352,7 @@ _REV_MARGIN       = 56
 _REV_PLATE        = 112
 _REV_HEADER_Y     = 44
 _REV_RULE_Y       = 184
-_REV_RAIL_TOP     = 836
+_REV_RAIL_H       = 244
 _REV_FLASH_PERIOD = 0.7
 _REV_FLASH_DIM    = 0.18
 
@@ -337,65 +366,78 @@ _TXT_DISCARD  = "DISCARD"
 _TXT_PRINT2   = "PRINT"
 
 
-def _draw_review_header(screen, now: float, time_left: float, screen_w: int):
-    secs   = max(0, math.ceil(time_left))
-    urgent = time_left <= PREVIEW_URGENT_AT
+def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: float):
+    plate_sz = scale_px(_REV_PLATE, s)
+    secs     = max(0, math.ceil(time_left))
+    urgent   = time_left <= PREVIEW_URGENT_AT
 
-    plate = pygame.Surface((_REV_PLATE, _REV_PLATE), pygame.SRCALPHA)
+    plate = pygame.Surface((plate_sz, plate_sz), pygame.SRCALPHA)
     plate.fill((*(ACCENT if urgent else INK), 255))
-    num = _archivo(800, 60).render(f"{secs:02d}", True, GROUND)
-    plate.blit(num, num.get_rect(center=(_REV_PLATE // 2, _REV_PLATE // 2)))
+    num = _archivo(800, scale_px(60, s)).render(f"{secs:02d}", True, GROUND)
+    plate.blit(num, num.get_rect(center=(plate_sz // 2, plate_sz // 2)))
     if urgent and ((now % _REV_FLASH_PERIOD) / _REV_FLASH_PERIOD) >= 0.5:
         plate.set_alpha(round(255 * _REV_FLASH_DIM))
-    screen.blit(plate, (_REV_MARGIN, _REV_HEADER_Y))
+    margin, header_y = scale_px(_REV_MARGIN, s), scale_px(_REV_HEADER_Y, s)
+    screen.blit(plate, (margin, header_y))
 
-    line1 = _tracked(700, 19, _TXT_SECONDS, NEUTRAL_600, 0.20)
-    line2 = _tracked(700, 19, _TXT_LET_GO, INK, 0.20)
-    tx = _REV_MARGIN + _REV_PLATE + 18
-    block_h = line1.get_height() + line2.get_height() + 4
-    top = _REV_HEADER_Y + (_REV_PLATE - block_h) // 2
+    size  = scale_px(19, s)
+    line1 = _tracked(700, size, _TXT_SECONDS, NEUTRAL_600, 0.20)
+    line2 = _tracked(700, size, _TXT_LET_GO, INK, 0.20)
+    tx = margin + plate_sz + scale_px(18, s)
+    line_gap = scale_px(4, s)
+    block_h = line1.get_height() + line2.get_height() + line_gap
+    top = header_y + (plate_sz - block_h) // 2
     screen.blit(line1, (tx, top))
-    screen.blit(line2, (tx, top + line1.get_height() + 4))
+    screen.blit(line2, (tx, top + line1.get_height() + line_gap))
 
 
-def _draw_review_grid(screen, grid_surfs: list, screen_w: int):
+def _draw_review_grid(screen, grid_surfs: list, screen_w: int, screen_h: int, s: float):
+    mat_pad = scale_px(REVIEW_MAT_PAD, s)
+    border  = scale_px(2, s)
     for item in grid_surfs:
         if item is None:
             continue
         surf, cx, cy, cw, ch = item
         pygame.draw.rect(screen, WHITE, (cx, cy, cw, ch))
         if surf is not None:
-            screen.blit(surf, (cx + REVIEW_MAT_PAD, cy + REVIEW_MAT_PAD))
-        pygame.draw.rect(screen, INK, (cx, cy, cw, ch), 2)
+            screen.blit(surf, (cx + mat_pad, cy + mat_pad))
+        pygame.draw.rect(screen, INK, (cx, cy, cw, ch), border)
 
-    grid_x = (screen_w - REVIEW_GRID_W) // 2
-    logo = _get_logo(340)
+    grid_w, grid_h = scale_px(REVIEW_GRID_W, s), scale_px(REVIEW_GRID_H, s)
+    grid_x = (screen_w - grid_w) // 2
+    grid_y = scale_px(REVIEW_GRID_Y, s)
+    logo = _get_logo(scale_px(340, s))
     if logo is not None:
         screen.blit(logo, logo.get_rect(
-            center=(grid_x + REVIEW_GRID_W // 2, REVIEW_GRID_Y + REVIEW_GRID_H // 2)))
+            center=(grid_x + grid_w // 2, grid_y + grid_h // 2)))
 
 
-def _draw_stepper_cap(screen, cx: int, cy: int, d: int, active: bool, glyph: str):
+def _draw_stepper_cap(screen, cx: int, cy: int, d: int, active: bool, glyph: str, s: float):
     alpha = 255 if active else round(255 * 0.45)
-    pygame.draw.circle(screen, NEUTRAL_400, (cx, cy + 6), d // 2)
-    cap = pygame.Surface((d + 4, d + 4), pygame.SRCALPHA)
-    c   = d // 2 + 2
+    drop  = scale_px(6, s)
+    pygame.draw.circle(screen, NEUTRAL_400, (cx, cy + drop), d // 2)
+    pad = scale_px(4, s)
+    cap = pygame.Surface((d + pad, d + pad), pygame.SRCALPHA)
+    c   = d // 2 + pad // 2
+    border = scale_px(2, s)
     pygame.draw.circle(cap, (*WHITE, alpha), (c, c), d // 2)
-    pygame.draw.circle(cap, (*INK, alpha),   (c, c), d // 2, 2)
-    pygame.draw.rect(cap, (*INK, alpha), (c - 19, c - 3, 38, 7))
+    pygame.draw.circle(cap, (*INK, alpha),   (c, c), d // 2, border)
+    bar_w, bar_h = scale_px(38, s), scale_px(7, s)
+    pygame.draw.rect(cap, (*INK, alpha), (c - bar_w // 2, c - bar_h // 2, bar_w, bar_h))
     if glyph == "plus":
-        pygame.draw.rect(cap, (*INK, alpha), (c - 3, c - 19, 7, 38))
+        pygame.draw.rect(cap, (*INK, alpha), (c - bar_h // 2, c - bar_w // 2, bar_h, bar_w))
     screen.blit(cap, (cx - c, cy - c))
 
 
-def _draw_stepper(screen, x: int, rail_y: int, rail_h: int, print_qty: int):
-    d, gap_lbl, cap_gap = 96, 10, 14
+def _draw_stepper(screen, x: int, rail_y: int, rail_h: int, print_qty: int, s: float):
+    d, gap_lbl, cap_gap = scale_px(96, s), scale_px(10, s), scale_px(14, s)
     fewer_on, more_on = print_qty > PRINT_QTY_MIN, print_qty < PRINT_QTY_MAX
-    fewer_lbl = _tracked(700, 17, _TXT_FEWER, NEUTRAL_700, 0.16)
-    more_lbl  = _tracked(700, 17, _TXT_MORE,  NEUTRAL_700, 0.16)
-    copies_lbl = _tracked(700, 18, _TXT_COPIES2, NEUTRAL_600, 0.20)
-    qty_num  = _archivo(800, 76).render(str(print_qty), True, INK)
-    qty_word = _tracked(700, 24, "COPY" if print_qty == 1 else "COPIES", NEUTRAL_700, 0.12)
+    lbl_sz     = scale_px(17, s)
+    fewer_lbl  = _tracked(700, lbl_sz, _TXT_FEWER, NEUTRAL_700, 0.16)
+    more_lbl   = _tracked(700, lbl_sz, _TXT_MORE,  NEUTRAL_700, 0.16)
+    copies_lbl = _tracked(700, scale_px(18, s), _TXT_COPIES2, NEUTRAL_600, 0.20)
+    qty_num    = _archivo(800, scale_px(76, s)).render(str(print_qty), True, INK)
+    qty_word   = _tracked(700, scale_px(24, s), "COPY" if print_qty == 1 else "COPIES", NEUTRAL_700, 0.12)
 
     cap_stack_h   = d + gap_lbl + max(fewer_lbl.get_height(), more_lbl.get_height())
     row_h         = max(qty_num.get_height(), qty_word.get_height())
@@ -408,44 +450,49 @@ def _draw_stepper(screen, x: int, rail_y: int, rail_h: int, print_qty: int):
     fewer_cx = x + d // 2
     more_cx  = fewer_cx + d + cap_gap
 
-    _draw_stepper_cap(screen, fewer_cx, cap_cy, d, fewer_on, "minus")
+    _draw_stepper_cap(screen, fewer_cx, cap_cy, d, fewer_on, "minus", s)
     screen.blit(fewer_lbl, fewer_lbl.get_rect(centerx=fewer_cx, top=cap_top + d + gap_lbl))
-    _draw_stepper_cap(screen, more_cx, cap_cy, d, more_on, "plus")
+    _draw_stepper_cap(screen, more_cx, cap_cy, d, more_on, "plus", s)
     screen.blit(more_lbl, more_lbl.get_rect(centerx=more_cx, top=cap_top + d + gap_lbl))
 
     text_top   = col_bottom - text_block_h
-    divider_x  = more_cx + d // 2 + 26
-    pygame.draw.line(screen, INK, (divider_x, min(cap_top, text_top)), (divider_x, col_bottom), 2)
+    gap_div    = scale_px(26, s)
+    divider_x  = more_cx + d // 2 + gap_div
+    pygame.draw.line(screen, INK, (divider_x, min(cap_top, text_top)), (divider_x, col_bottom), scale_px(2, s))
 
-    tx = divider_x + 26
+    tx = divider_x + gap_div
     screen.blit(copies_lbl, (tx, text_top))
     row_y = text_top + copies_lbl.get_height()
+    gap_num = scale_px(10, s)
     screen.blit(qty_num,  (tx, row_y + row_h - qty_num.get_height()))
-    screen.blit(qty_word, (tx + qty_num.get_width() + 10, row_y + row_h - qty_word.get_height()))
+    screen.blit(qty_word, (tx + qty_num.get_width() + gap_num, row_y + row_h - qty_word.get_height()))
 
 
-def _draw_review_qr(screen, qr_surf, screen_w: int, rail_y: int, rail_h: int):
+def _draw_review_qr(screen, qr_surf, screen_w: int, rail_y: int, rail_h: int, s: float):
     if qr_surf is None:
         return
-    box, gap = 140, 10   # 8px inner padding is implicit: 140 - 2*8 = 124 = qr_surf size
-    label = _tracked(700, 19, _TXT_SCAN, INK, 0.20)
+    box = scale_px(140, s)
+    gap = scale_px(10, s)   # 8px inner padding is implicit: qr_surf is generated pre-scaled to fit
+    label = _tracked(700, scale_px(19, s), _TXT_SCAN, INK, 0.20)
     stack_h = box + gap + label.get_height()
     top = rail_y + (rail_h - stack_h) // 2
 
     box_rect = pygame.Rect(0, 0, box, box)
     box_rect.centerx, box_rect.top = screen_w // 2, top
     pygame.draw.rect(screen, WHITE, box_rect)
-    pygame.draw.rect(screen, INK, box_rect, 2)
+    pygame.draw.rect(screen, INK, box_rect, scale_px(2, s))
     screen.blit(qr_surf, qr_surf.get_rect(center=box_rect.center))
     screen.blit(label, label.get_rect(centerx=screen_w // 2, top=box_rect.bottom + gap))
 
 
-def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, print_qty: int):
-    discard_lbl = _tracked(800, 19, _TXT_DISCARD, INK, 0.16)
+def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, print_qty: int, s: float):
+    lbl_sz = scale_px(19, s)
+    discard_lbl = _tracked(800, lbl_sz, _TXT_DISCARD, INK, 0.16)
     qty_word    = "COPY" if print_qty == 1 else "COPIES"
-    print_lbl   = _tracked(800, 19, f"PRINT {print_qty} {qty_word}", INK, 0.16)
+    print_lbl   = _tracked(800, lbl_sz, f"PRINT {print_qty} {qty_word}", INK, 0.16)
 
-    d_disc, d_print, action_gap, lbl_gap = 112, 148, 28, 10
+    d_disc, d_print   = scale_px(112, s), scale_px(148, s)
+    action_gap, lbl_gap = scale_px(28, s), scale_px(10, s)
     disc_h  = d_disc  + lbl_gap + discard_lbl.get_height()
     print_h = d_print + lbl_gap + print_lbl.get_height()
     col_bottom = rail_y + rail_h // 2 + max(disc_h, print_h) // 2
@@ -455,38 +502,46 @@ def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, prin
     disc_cy  = col_bottom - discard_lbl.get_height() - lbl_gap - d_disc // 2
     print_cy = col_bottom - print_lbl.get_height()   - lbl_gap - d_print // 2
 
+    border = scale_px(2, s)
+
     # Discard
-    pygame.draw.circle(screen, NEUTRAL_500, (disc_cx, disc_cy + 6), d_disc // 2)
+    disc_drop = scale_px(6, s)
+    pygame.draw.circle(screen, NEUTRAL_500, (disc_cx, disc_cy + disc_drop), d_disc // 2)
     pygame.draw.circle(screen, INK, (disc_cx, disc_cy), d_disc // 2)
-    pygame.draw.circle(screen, INK, (disc_cx, disc_cy), d_disc // 2, 2)
-    half = 16
-    pygame.draw.line(screen, WHITE, (disc_cx - half, disc_cy - half), (disc_cx + half, disc_cy + half), 6)
-    pygame.draw.line(screen, WHITE, (disc_cx - half, disc_cy + half), (disc_cx + half, disc_cy - half), 6)
+    pygame.draw.circle(screen, INK, (disc_cx, disc_cy), d_disc // 2, border)
+    half   = scale_px(16, s)
+    line_w = scale_px(6, s)
+    pygame.draw.line(screen, WHITE, (disc_cx - half, disc_cy - half), (disc_cx + half, disc_cy + half), line_w)
+    pygame.draw.line(screen, WHITE, (disc_cx - half, disc_cy + half), (disc_cx + half, disc_cy - half), line_w)
     screen.blit(discard_lbl, discard_lbl.get_rect(centerx=disc_cx, top=disc_cy + d_disc // 2 + lbl_gap))
 
     # Print
-    pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy + 8), d_print // 2)
+    print_drop = scale_px(8, s)
+    pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy + print_drop), d_print // 2)
     pygame.draw.circle(screen, ACCENT, (print_cx, print_cy), d_print // 2)
-    pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy), d_print // 2, 2)
-    print_word = _tracked(800, 30, _TXT_PRINT2, WHITE, 0.06)
+    pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy), d_print // 2, border)
+    print_word = _tracked(800, scale_px(30, s), _TXT_PRINT2, WHITE, 0.06)
     screen.blit(print_word, print_word.get_rect(center=(print_cx, print_cy)))
     screen.blit(print_lbl, print_lbl.get_rect(centerx=print_cx, top=print_cy + d_print // 2 + lbl_gap))
 
 
 def render_grid(screen, grid_surfs: list, screen_w: int, screen_h: int,
                 now: float, time_left: float, print_qty: int = 1, qr_surf=None):
+    s = fit_scale(screen_w, screen_h)
     screen.fill(GROUND)
-    _draw_review_header(screen, now, time_left, screen_w)
-    pygame.draw.line(screen, INK, (_REV_MARGIN, _REV_RULE_Y), (screen_w - _REV_MARGIN, _REV_RULE_Y), 2)
-    _draw_review_grid(screen, grid_surfs, screen_w)
+    _draw_review_header(screen, now, time_left, screen_w, s)
+    margin, rule_y = scale_px(_REV_MARGIN, s), scale_px(_REV_RULE_Y, s)
+    pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
+    _draw_review_grid(screen, grid_surfs, screen_w, screen_h, s)
 
-    rail_y, rail_h = _REV_RAIL_TOP, screen_h - _REV_RAIL_TOP
+    rail_h = scale_px(_REV_RAIL_H, s)
+    rail_y = screen_h - rail_h
     pygame.draw.rect(screen, NEUTRAL_200, (0, rail_y, screen_w, rail_h))
-    pygame.draw.line(screen, INK, (0, rail_y), (screen_w, rail_y), 2)
+    pygame.draw.line(screen, INK, (0, rail_y), (screen_w, rail_y), scale_px(2, s))
 
-    _draw_stepper(screen, _REV_MARGIN, rail_y, rail_h, print_qty)
-    _draw_review_qr(screen, qr_surf, screen_w, rail_y, rail_h)
-    _draw_review_actions(screen, screen_w - _REV_MARGIN, rail_y, rail_h, print_qty)
+    _draw_stepper(screen, margin, rail_y, rail_h, print_qty, s)
+    _draw_review_qr(screen, qr_surf, screen_w, rail_y, rail_h, s)
+    _draw_review_actions(screen, screen_w - margin, rail_y, rail_h, print_qty, s)
 
 
 # ── Printing animation ────────────────────────────────────────────────────────

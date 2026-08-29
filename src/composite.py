@@ -31,6 +31,19 @@ _LOGO_WIDTH_RATIO  = 0.44
 
 _BG_COLOR = (252, 252, 248, 255)
 
+# Design canvas the "2b"/"1d" screens (docs/design/README.md) were drawn at.
+_DESIGN_W, _DESIGN_H = 1920, 1080
+
+
+def fit_scale(screen_w: int, screen_h: int) -> float:
+    """Uniform scale so the fixed 1920x1080 design fits screen_w x screen_h
+    without clipping or overlap, preserving proportions on any real display."""
+    return min(screen_w / _DESIGN_W, screen_h / _DESIGN_H)
+
+
+def scale_px(v: float, s: float) -> int:
+    return max(1, round(v * s))
+
 
 # ── Logo loading ──────────────────────────────────────────────────────────────
 
@@ -149,15 +162,23 @@ REVIEW_MAT_PAD               = 10
 REVIEW_GRID_Y                = 228   # fixed y per the 1920x1080 design (docs/design/README.md)
 
 
-def build_review_grid_surfs(photo_paths: list, screen_w: int) -> list:
+def build_review_grid_surfs(photo_paths: list, screen_w: int, screen_h: int) -> list:
     """Build the fixed 2x2 review-screen grid: 4 (photo_surf, x, y, cell_w, cell_h)
-    tuples in absolute screen coordinates. photo_surf is already cropped to fill
-    the cell's inner mat (cell size minus 10px padding); None where a photo is missing."""
-    cell_w = (REVIEW_GRID_W - REVIEW_GRID_GAP) // 2
-    cell_h = (REVIEW_GRID_H - REVIEW_GRID_GAP) // 2
-    photo_w, photo_h = cell_w - REVIEW_MAT_PAD * 2, cell_h - REVIEW_MAT_PAD * 2
-    grid_x  = (screen_w - REVIEW_GRID_W) // 2
-    offsets = _grid_cell_offsets(cell_w, cell_h, REVIEW_GRID_GAP, 0)
+    tuples in absolute screen coordinates, scaled to fit screen_w x screen_h.
+    photo_surf is already cropped to fill the cell's inner mat; None where a
+    photo is missing."""
+    s = fit_scale(screen_w, screen_h)
+    grid_w  = scale_px(REVIEW_GRID_W, s)
+    grid_h  = scale_px(REVIEW_GRID_H, s)
+    gap     = scale_px(REVIEW_GRID_GAP, s)
+    mat_pad = scale_px(REVIEW_MAT_PAD, s)
+    grid_x  = (screen_w - grid_w) // 2
+    grid_y  = scale_px(REVIEW_GRID_Y, s)
+
+    cell_w = (grid_w - gap) // 2
+    cell_h = (grid_h - gap) // 2
+    photo_w, photo_h = cell_w - mat_pad * 2, cell_h - mat_pad * 2
+    offsets = _grid_cell_offsets(cell_w, cell_h, gap, 0)
 
     cells = []
     for i in range(4):
@@ -168,7 +189,7 @@ def build_review_grid_surfs(photo_paths: list, screen_w: int) -> list:
             cell = _crop_photo_to_cell(img, photo_w, photo_h)
             surf = pygame.surfarray.make_surface(cell.swapaxes(0, 1))
         ox, oy = offsets[i]
-        cells.append((surf, grid_x + ox, REVIEW_GRID_Y + oy, cell_w, cell_h))
+        cells.append((surf, grid_x + ox, grid_y + oy, cell_w, cell_h))
     return cells
 
 

@@ -11,7 +11,7 @@ from config.config import (
     PHOTOS_DIR, CAMERA_INDEX, COUNTDOWN_SECONDS, TOTAL_PHOTOS,
     PREVIEW_DURATION, TARGET_FPS,
     AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER,
-    CAROUSEL_STRIP_HEIGHT, CAROUSEL_SCROLL_SPEED, CAROUSEL_PADDING,
+    CAROUSEL_SCROLL_SPEED, CAROUSEL_PADDING,
     PRINT_COMPOSE_DUR, PRINT_HOLD_DUR, PRINT_SLIDE_DUR,
     PRINT_QTY_DEFAULT, PRINT_QTY_MIN, PRINT_QTY_MAX,
     GPIO_BUTTON_START, GPIO_BUTTON_SNAP, GPIO_BUTTON_PRINT,
@@ -19,7 +19,7 @@ from config.config import (
     PRINTER_CHECK_INTERVAL,
 )
 from camera    import grab_live_surface, snap_photo
-from composite import build_review_grid_surfs, build_composite_surf, build_print_image
+from composite import build_review_grid_surfs, build_composite_surf, build_print_image, fit_scale, scale_px
 from carousel  import load_carousel_photos, count_photos
 from qr        import make_qr_surf
 from printer   import print_polaroid, get_printer_info
@@ -27,7 +27,7 @@ from server    import start_file_server
 from screens   import (
     render_idle, render_countdown, render_preview, render_grid,
     render_printing_compose, render_printing_hold, render_printing_slide,
-    draw_thumbnails, draw_printer_status_dot, IDLE_VIEWFINDER_INNER,
+    draw_thumbnails, draw_printer_status_dot, idle_viewfinder_inner, IDLE_THUMB_H,
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ from screens   import (
 _PRINTS_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "prints")
 _SFX_DIR        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sfx")
 _GRID_TIMEOUT   = 25.0
-_QR_SIZE        = 124
+_QR_SIZE        = 124   # design-scale px; actual size is scaled to fit the real screen
 _QR_ARCHIVE_FMT = "print_%Y%m%d_%H%M%S.jpg"
 _SFX_BEEP       = "count_down_beep.mp3"
 _SFX_SHUTTER    = "camera_shot.mp3"
@@ -82,6 +82,8 @@ class GameState:
         self.carousel_photos: list    = []
         self.carousel_start: float    = 0.0
         self.photo_count: int         = 0
+        self.screen_w: int            = 0
+        self.screen_h: int            = 0
 
     def clear_session(self):
         self.thumbnails.clear()
@@ -94,7 +96,7 @@ class GameState:
         self.print_qty   = PRINT_QTY_DEFAULT
         self.qr_surf     = None
         self.clear_session()
-        self.carousel_photos, self.carousel_start = _reset_carousel()
+        self.carousel_photos, self.carousel_start = _reset_carousel(self.screen_w, self.screen_h)
         self.photo_count = count_photos()
 
 
@@ -147,24 +149,28 @@ def _build_text_assets(screen_w: int, screen_h: int):
     return labels, cd_surfs
 
 
-def _reset_carousel():
-    photos = load_carousel_photos(CAROUSEL_STRIP_HEIGHT)
+def _reset_carousel(screen_w: int, screen_h: int):
+    s = fit_scale(screen_w, screen_h)
+    photos = load_carousel_photos(scale_px(IDLE_THUMB_H, s))
     if photos:
-        total_w = sum(s.get_width() + CAROUSEL_PADDING for s in photos)
-        start   = time.monotonic() - random.uniform(0, total_w) / CAROUSEL_SCROLL_SPEED
+        pad     = scale_px(CAROUSEL_PADDING, s)
+        speed   = CAROUSEL_SCROLL_SPEED * s
+        total_w = sum(p.get_width() + pad for p in photos)
+        start   = time.monotonic() - random.uniform(0, total_w) / speed
     else:
         start = time.monotonic()
     return photos, start
 
 
-def _generate_qr(photo_paths: list, server_base_url: str) -> pygame.Surface | None:
+def _generate_qr(photo_paths: list, server_base_url: str, screen_w: int, screen_h: int) -> pygame.Surface | None:
     try:
         os.makedirs(_PRINTS_DIR, exist_ok=True)
         pil_img = build_print_image(photo_paths)
         fname   = time.strftime(_QR_ARCHIVE_FMT)
         fpath   = os.path.join(_PRINTS_DIR, fname)
         pil_img.save(fpath, _JPEG_FORMAT, quality=_JPEG_QUALITY, dpi=_PRINT_DPI)
-        return make_qr_surf(f"{server_base_url}/{fname}", size=_QR_SIZE)
+        qr_size = scale_px(_QR_SIZE, fit_scale(screen_w, screen_h))
+        return make_qr_surf(f"{server_base_url}/{fname}", size=qr_size)
     except Exception as e:
         print(f"QR generation failed: {e}")
         return None
@@ -255,7 +261,7 @@ def _tick_countdown_frame(gs: GameState, screen, screen_w: int, screen_h: int, n
                          gs.photo_index, screen_w, screen_h, num)
 
 
-def _advance_after_preview(gs: GameState, screen_w: int,
+def _advance_after_preview(gs: GameState, screen_w: int, screen_h: int,
                            now: float, server_base_url: str) -> None:
     if gs.photo_index < TOTAL_PHOTOS:
         gs.countdown_start = now
@@ -263,8 +269,8 @@ def _advance_after_preview(gs: GameState, screen_w: int,
     else:
         gs.state           = _STATE_GRID
         gs.grid_enter_time = now
-        gs.grid_surfs      = build_review_grid_surfs(gs.photo_paths, screen_w)
-        gs.qr_surf         = _generate_qr(gs.photo_paths, server_base_url)
+        gs.grid_surfs      = build_review_grid_surfs(gs.photo_paths, screen_w, screen_h)
+        gs.qr_surf         = _generate_qr(gs.photo_paths, server_base_url, screen_w, screen_h)
 
 
 def _handle_live_key(gs: GameState, key, now: float) -> None:
@@ -279,7 +285,7 @@ def _handle_live_key(gs: GameState, key, now: float) -> None:
 
 def _render_idle_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int, now: float) -> bool:
     """Render one frame of the idle screen. Returns False on camera failure."""
-    vf_w, vf_h = IDLE_VIEWFINDER_INNER
+    vf_w, vf_h = idle_viewfinder_inner(screen_w, screen_h)
     live_box = grab_live_surface(cap, vf_w, vf_h)
     if live_box is None:
         return False
@@ -311,7 +317,7 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
             age = now - gs.event_time
             render_preview(screen, flash_surf, dim_surf, gs.preview_surf, age, screen_w, screen_h)
             if age >= PREVIEW_DURATION:
-                _advance_after_preview(gs, screen_w, now, server_base_url)
+                _advance_after_preview(gs, screen_w, screen_h, now, server_base_url)
 
         draw_thumbnails(screen, gs.thumbnails, screen_w, screen_h)
 
@@ -383,7 +389,8 @@ def main():
     photo_labels, countdown_surfs    = _build_text_assets(screen_w, screen_h)
 
     gs = GameState()
-    gs.carousel_photos, gs.carousel_start = _reset_carousel()
+    gs.screen_w, gs.screen_h               = screen_w, screen_h
+    gs.carousel_photos, gs.carousel_start  = _reset_carousel(screen_w, screen_h)
     gs.photo_count                         = count_photos()
     gs.printer_info                        = get_printer_info()
     gs.last_printer_check                  = time.monotonic()
