@@ -47,9 +47,9 @@ The script will:
 ## Running
 
 ```bash
-source .venv/bin/activate
+source venv/bin/activate
 cd src
-python booth.py
+python main.py
 ```
 
 ## Controls

@@ -36,9 +36,12 @@ GRID_ACTION_BAR_H  = 100   # px – space at bottom reserved for the action bar
 PREVIEW_SCALE = 0.75       # fraction of screen the single-photo preview fills
 
 # ── Carousel (idle screen) ────────────────────────────────────────────────────
-CAROUSEL_STRIP_HEIGHT = 180   # px – height of the scrolling photo strip
-CAROUSEL_SCROLL_SPEED = 80    # px/s – how fast photos scroll left
-CAROUSEL_PADDING      = 14    # px – gap between photos in the strip
+CAROUSEL_STRIP_HEIGHT = 132   # px – height of the scrolling photo strip
+CAROUSEL_SCROLL_SPEED = 47    # px/s – how fast photos scroll left
+CAROUSEL_PADDING      = 12    # px – gap between photos in the strip
+
+# ── Preview / review screen (grid) ────────────────────────────────────────────
+PREVIEW_URGENT_AT = 10        # seconds left at which the countdown plate starts flashing
 
 # ── Printer ───────────────────────────────────────────────────────────────────
 PRINTER_CHECK_INTERVAL = 10.0  # seconds between printer status polls
@@ -62,3 +65,18 @@ GPIO_BUTTON_PRINT  = 22    # Blue   – print polaroid (grid screen)
 GPIO_BUTTON_RETAKE = 23    # Red    – retake / return to idle (grid screen)
 GPIO_BUTTON_QTY_P  = 24    # Grey   - increase print qty maximum 4
 GPIO_BUTTON_QTY_N  = 25    # Grey   - descrease print qty minimum 1
+
+# ── Design tokens (Modernist design system) ───────────────────────────────────
+# From docs/design/README.md — home (2b) and preview/review (1d) screens.
+GROUND       = (243, 242, 242)  # page background (light screens)
+INK          = ( 32,  30,  29)  # text, 2px rules, borders, discard cap
+ACCENT       = (236,  48,  19)  # print cap, urgent timer, live dot
+ACCENT_DARK  = (184,  31,   8)  # print cap outline + 8px drop
+NEUTRAL_200  = (226, 224, 222)  # bottom rail fill
+NEUTRAL_400  = (182, 179, 176)  # 6px drop under white caps
+NEUTRAL_500  = (138, 135, 132)  # 6px drop under discard cap
+NEUTRAL_600  = (110, 107, 104)  # small label text
+NEUTRAL_700  = ( 82,  79,  77)  # stepper cap labels
+GREEN        = ( 63, 155,  79)  # start cap (home screen)
+GREEN_DARK   = ( 37,  96,  52)  # drop under start cap
+WHITE        = (255, 255, 255)  # photo mats, QR, stepper caps
