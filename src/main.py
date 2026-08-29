@@ -18,17 +18,18 @@ from config.config import (
     GPIO_BUTTON_RETAKE, GPIO_BUTTON_QTY_P, GPIO_BUTTON_QTY_N,
     PRINTER_CHECK_INTERVAL,
 )
-from camera    import grab_live_surface, snap_photo
-from composite import build_review_grid_surfs, build_composite_surf, build_print_image, fit_scale, scale_px
-from carousel  import load_carousel_photos, count_photos
-from qr        import make_qr_surf
-from printer   import print_polaroid, get_printer_info
-from server    import start_file_server
-from screens   import (
+from camera      import grab_live_surface, snap_photo
+from composite   import build_review_grid_surfs, build_composite_surf, build_print_image, fit_scale, scale_px
+from carousel    import load_carousel_photos, count_photos
+from qr          import make_qr_surf
+from printer     import print_polaroid, get_printer_info
+from server      import start_file_server
+from gallery_app import start_gallery_server
+from screens     import (
     render_idle, render_countdown, render_preview, render_grid,
     render_printing_compose, render_printing_hold, render_printing_slide,
     draw_thumbnails, draw_printer_status_dot, idle_viewfinder_inner, IDLE_THUMB_H,
-    review_grid_rect,
+    review_grid_rect, idle_gallery_qr_size,
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ _PRINTS_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..",
 _SFX_DIR        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sfx")
 _GRID_TIMEOUT   = 25.0
 _QR_SIZE        = 124   # design-scale px; actual size is scaled to fit the real screen
-_QR_ARCHIVE_FMT = "print_%Y%m%d_%H%M%S.jpg"
+_GALLERY_PORT   = 8081  # serves PHOTOS_DIR (every shot of the night) for the home-screen QR
 _SFX_BEEP       = "count_down_beep.mp3"
 _SFX_SHUTTER    = "camera_shot.mp3"
 _WINDOW_CAPTION = "Photo Booth"
@@ -62,6 +63,7 @@ class GameState:
         self.state             = _STATE_IDLE
         self.running           = True
         self.photo_index       = 0
+        self.session_id: str   = ""
         self.thumbnails: list  = []
         self.photo_paths: list = []
         self.grid_surfs: list  = []
@@ -85,6 +87,7 @@ class GameState:
         self.photo_count: int         = 0
         self.screen_w: int            = 0
         self.screen_h: int            = 0
+        self.gallery_qr_surf          = None
 
     def clear_session(self):
         self.thumbnails.clear()
@@ -163,11 +166,11 @@ def _reset_carousel(screen_w: int, screen_h: int):
     return photos, start
 
 
-def _generate_qr(photo_paths: list, server_base_url: str, screen_w: int, screen_h: int) -> pygame.Surface | None:
+def _generate_qr(photo_paths: list, session_id: str, server_base_url: str, screen_w: int, screen_h: int) -> pygame.Surface | None:
     try:
         os.makedirs(_PRINTS_DIR, exist_ok=True)
         pil_img = build_print_image(photo_paths)
-        fname   = time.strftime(_QR_ARCHIVE_FMT)
+        fname   = f"print_{session_id}.jpg"
         fpath   = os.path.join(_PRINTS_DIR, fname)
         pil_img.save(fpath, _JPEG_FORMAT, quality=_JPEG_QUALITY, dpi=_PRINT_DPI)
         qr_size = scale_px(_QR_SIZE, fit_scale(screen_w, screen_h))
@@ -242,7 +245,7 @@ def _tick_countdown_frame(gs: GameState, screen, screen_w: int, screen_h: int, n
         gs.skip_countdown = False
         gs.last_beep_num  = -1
         snd_shutter.play()
-        result = snap_photo(cap, gs.photo_index, screen_w, screen_h)
+        result = snap_photo(cap, gs.session_id, gs.photo_index, screen_w, screen_h)
         if result:
             path, thumb, gs.preview_surf = result
             gs.photo_paths.append(path)
@@ -272,13 +275,14 @@ def _advance_after_preview(gs: GameState, screen_w: int, screen_h: int,
         gs.grid_enter_time = now
         gx, gy, gw, gh     = review_grid_rect(screen_w, screen_h)
         gs.grid_surfs      = build_review_grid_surfs(gs.photo_paths, gx, gy, gw, gh)
-        gs.qr_surf         = _generate_qr(gs.photo_paths, server_base_url, screen_w, screen_h)
+        gs.qr_surf         = _generate_qr(gs.photo_paths, gs.session_id, server_base_url, screen_w, screen_h)
 
 
 def _handle_live_key(gs: GameState, key, now: float) -> None:
     if   key == pygame.K_ESCAPE:                                          gs.running = False
     elif key == pygame.K_SPACE and gs.state == _STATE_IDLE:
         gs.clear_session()
+        gs.session_id = time.strftime("%Y%m%d_%H%M%S")
         gs.photo_index, gs.last_beep_num = 0, -1
         gs.countdown_start = now
         gs.state           = _STATE_COUNTDOWN
@@ -292,7 +296,7 @@ def _render_idle_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
     if live_box is None:
         return False
     render_idle(screen, live_box, gs.carousel_photos, gs.carousel_start, now,
-                gs.photo_count, screen_w, screen_h)
+                gs.photo_count, screen_w, screen_h, gs.gallery_qr_surf)
     return True
 
 
@@ -368,7 +372,8 @@ def _run_loop(gs: GameState, screen, cap, clock, screen_w: int, screen_h: int,
 def main():
     os.makedirs(PHOTOS_DIR,  exist_ok=True)
     os.makedirs(_PRINTS_DIR, exist_ok=True)
-    server_base_url = start_file_server(_PRINTS_DIR)
+    server_base_url  = start_file_server(_PRINTS_DIR)
+    gallery_base_url = start_gallery_server(PHOTOS_DIR, _PRINTS_DIR, port=_GALLERY_PORT)
 
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
@@ -396,6 +401,8 @@ def main():
     gs.photo_count                         = count_photos()
     gs.printer_info                        = get_printer_info()
     gs.last_printer_check                  = time.monotonic()
+    gs.gallery_qr_surf                     = make_qr_surf(
+        gallery_base_url, size=idle_gallery_qr_size(screen_w, screen_h))
 
     _run_loop(gs, screen, cap, clock, screen_w, screen_h, server_base_url,
               vignette, flash_surf, dim_surf,

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ session.time.strftime('%-I:%M %p') }} &middot; Photo {{ local_index }}</title>
+<link rel="stylesheet" href="/static/gallery.css">
+</head>
+<body class="dark">
+<div class="page">
+
+  <div class="photo-topbar">
+    <a class="photo-back" href="/"><span class="chevron"></span>ALL PHOTOS</a>
+    <div class="photo-index">{{ global_index }} / {{ total }}</div>
+  </div>
+
+  <div class="photo-main">
+    <img src="/photos/{{ session.photos[local_index - 1] }}" alt="">
+  </div>
+
+  <div class="photo-session-line">
+    {{ session.time.strftime('%-I:%M %p') }} &middot; PHOTO {{ local_index }} OF {{ session.photos|length }}
+  </div>
+
+  <div class="photo-strip">
+    {% for fname in session.photos %}
+    <a class="{{ 'current' if loop.index == local_index else '' }}" href="/photo/{{ session.id }}/{{ loop.index }}">
+      <img src="/photos/{{ fname }}" alt="">
+    </a>
+    {% endfor %}
+    {% if session.strip %}
+    <span><img src="/prints/{{ session.strip }}" alt=""></span>
+    {% endif %}
+  </div>
+
+  <div class="download-stack">
+    <a class="dl-row dl-primary" href="/download/photos/{{ session.photos[local_index - 1] }}" download>
+      <svg class="dl-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" x2="12" y1="15" y2="3"/>
+      </svg>DOWNLOAD THIS PHOTO
+    </a>
+    <button class="dl-row dl-outline" id="dl-all">DOWNLOAD ALL {{ session.photos|length }}{% if session.strip %} + STRIP{% endif %}</button>
+    <button class="dl-row dl-outline" id="share-btn">SHARE</button>
+    <div class="download-status" id="dl-status"></div>
+    <div class="download-note">FULL RESOLUTION<br>SAVES STRAIGHT TO YOUR CAMERA ROLL</div>
+  </div>
+
+</div>
+<script src="/static/gallery.js"></script>
+<script>
+  const sessionPhotoUrls = {{ session.photos|tojson }}.map((f) => '/download/photos/' + f);
+  const stripUrl = {{ (session.strip or '')|tojson }};
+  const allUrls = stripUrl ? sessionPhotoUrls.concat(['/download/prints/' + stripUrl]) : sessionPhotoUrls;
+  const currentUrl = '/download/photos/{{ session.photos[local_index - 1] }}';
+  const statusEl = document.getElementById('dl-status');
+
+  document.getElementById('dl-all').addEventListener('click', () => downloadSequential(allUrls));
+
+  document.getElementById('share-btn').addEventListener('click', async () => {
+    statusEl.textContent = 'Preparing…';
+    const ok = await shareFiles([currentUrl], 'Photo', (i, n) => { statusEl.textContent = `Preparing ${i} of ${n}…`; });
+    statusEl.textContent = ok ? '' : 'Sharing isn\'t supported on this browser — try Download instead.';
+  });
+
+  initSwipe(
+    {{ ('/photo/' ~ prev_ref[0] ~ '/' ~ prev_ref[1])|tojson if prev_ref else 'null' }},
+    {{ ('/photo/' ~ next_ref[0] ~ '/' ~ next_ref[1])|tojson if next_ref else 'null' }}
+  );
+</script>
+</body>
+</html>

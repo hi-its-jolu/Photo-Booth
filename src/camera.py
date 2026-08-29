@@ -1,4 +1,3 @@
-import time
 import os
 import cv2
 import pygame
@@ -50,12 +49,15 @@ def grab_live_surface(cap, screen_w: int, screen_h: int) -> pygame.Surface | Non
     return pygame.surfarray.make_surface(rgb.swapaxes(0, 1))
 
 
-def snap_photo(cap, photo_index: int, screen_w: int, screen_h: int):
-    """Capture one frame, save to disk. Returns (path, thumbnail, preview) or None."""
+def snap_photo(cap, session_id: str, photo_index: int, screen_w: int, screen_h: int):
+    """Capture one frame, save to disk. Returns (path, thumbnail, preview) or None.
+    `session_id` is shared by all photos (and the print) in one session, so the
+    gallery can group them — capture timing means each shot lands in a
+    different wall-clock second, so a fresh per-photo timestamp won't do."""
     ret, snap = cap.read()
     if not ret:
         return None
-    filename = time.strftime(f"photo_%Y%m%d_%H%M%S_{photo_index + 1}.jpg")
+    filename = f"photo_{session_id}_{photo_index + 1}.jpg"
     path = os.path.join(PHOTOS_DIR, filename)
     cv2.imwrite(path, snap)
     print(f"Saved: {path}")

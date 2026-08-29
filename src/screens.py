@@ -7,7 +7,7 @@ from config.config import (
     CAROUSEL_SCROLL_SPEED, CAROUSEL_PADDING, CAROUSEL_STRIP_HEIGHT, FLASH_DURATION,
     PRINT_QTY_MIN, PRINT_QTY_MAX, PREVIEW_URGENT_AT,
     THUMB_HEIGHT, THUMB_PADDING, THUMB_MARGIN_BOTTOM,
-    GROUND, INK, ACCENT, ACCENT_DARK, NEUTRAL_200, NEUTRAL_400, NEUTRAL_500,
+    GROUND, INK, ACCENT, ACCENT_DARK, NEUTRAL_200, NEUTRAL_300, NEUTRAL_400, NEUTRAL_500,
     NEUTRAL_600, NEUTRAL_700, GREEN, GREEN_DARK, WHITE,
 )
 from composite import (
@@ -178,15 +178,21 @@ _IDLE_STRIP_INSET = 6
 _IDLE_RAIL_H      = 92
 _IDLE_START_D     = 58
 _IDLE_START_DROP  = 4
+_IDLE_LIVE_GAP1   = 34   # gap between logo and the LIVE dot
+_IDLE_QR_BOX      = 112  # header gallery-QR box
+_IDLE_QR_PAD      = 7
 
 # Carousel thumbnail height at design scale: strip height minus the top inset,
 # flush to the strip's bottom rule (132 - 6 = 126).
 IDLE_THUMB_H = CAROUSEL_STRIP_HEIGHT - _IDLE_STRIP_INSET
 
-_TXT_LIVE    = "LIVE"
-_TXT_EARLIER = "EARLIER TONIGHT"
-_TXT_START   = "START"
-_TXT_PRESS   = "PRESS THE GREEN BUTTON — {n} PHOTOS, ABOUT 30 SECONDS"
+_TXT_LIVE      = "LIVE"
+_TXT_EARLIER   = "EARLIER TONIGHT"
+_TXT_START     = "START"
+_TXT_PRESS     = "PRESS THE GREEN BUTTON — {n} PHOTOS, ABOUT 30 SECONDS"
+_TXT_GALLERY_1 = "SEE EVERY PHOTO"
+_TXT_GALLERY_2 = "FROM TONIGHT"
+_TXT_GALLERY_3 = "SCAN FOR THE GALLERY"
 
 
 def idle_viewfinder_inner(screen_w: int, screen_h: int) -> tuple[int, int]:
@@ -197,22 +203,60 @@ def idle_viewfinder_inner(screen_w: int, screen_h: int) -> tuple[int, int]:
     return scale_px(_IDLE_VF_W, s) - border * 2, scale_px(_IDLE_VF_H, s) - border * 2
 
 
-def _draw_idle_header(screen, now: float, screen_w: int, s: float):
+def idle_gallery_qr_size(screen_w: int, screen_h: int) -> int:
+    """Pixel size to generate the home-gallery QR bitmap at, so it exactly
+    fills the header QR box (see _draw_idle_header) at the current scale.
+    The border is drawn on the box edge (doesn't eat into the interior), so
+    the bitmap is box - 2*pad, e.g. 112 - 2*7 = 98 at design scale."""
+    s = fit_scale(screen_w, screen_h)
+    box = scale_px(_IDLE_QR_BOX, s)
+    pad = scale_px(_IDLE_QR_PAD, s)
+    return max(1, box - 2 * pad)
+
+
+def _draw_idle_header(screen, now: float, screen_w: int, s: float, gallery_qr_surf=None):
     margin, header_y, logo_h = scale_px(_IDLE_MARGIN, s), scale_px(_IDLE_HEADER_Y, s), scale_px(_IDLE_LOGO_H, s)
     logo = _get_logo_by_height(logo_h)
+    logo_w = logo.get_width() if logo is not None else 0
     if logo is not None:
         screen.blit(logo, (margin, header_y))
     row_cy = header_y + logo_h // 2
 
+    # LIVE indicator, left — right after the logo.
     live_label = _tracked(700, scale_px(19, s), _TXT_LIVE, NEUTRAL_600, 0.20)
-    dot, gap   = scale_px(14, s), scale_px(14, s)
-    label_x    = (screen_w - margin) - live_label.get_width()
-    dot_x      = label_x - gap - dot
+    dot, gap1, gap2 = scale_px(14, s), scale_px(_IDLE_LIVE_GAP1, s), scale_px(14, s)
+    dot_x = margin + logo_w + gap1
 
     dot_surf = pygame.Surface((dot, dot), pygame.SRCALPHA)
     dot_surf.fill((*ACCENT, _pulse_alpha(now, 1.8)))
     screen.blit(dot_surf, (dot_x, row_cy - dot // 2))
-    screen.blit(live_label, (label_x, row_cy - live_label.get_height() // 2))
+    screen.blit(live_label, (dot_x + dot + gap2, row_cy - live_label.get_height() // 2))
+
+    # Gallery QR, right — flush right, with its two-part label to its left.
+    if gallery_qr_surf is not None:
+        box    = scale_px(_IDLE_QR_BOX, s)
+        border = scale_px(2, s)
+        box_x  = (screen_w - margin) - box
+        box_y  = row_cy - box // 2
+
+        head_sz = scale_px(24, s)
+        line1 = _archivo(800, head_sz).render(_TXT_GALLERY_1, True, INK)
+        line2 = _archivo(800, head_sz).render(_TXT_GALLERY_2, True, INK)
+        line3 = _tracked(700, scale_px(17, s), _TXT_GALLERY_3, NEUTRAL_600, 0.18)
+        gap_head, gap_sub = scale_px(2, s), scale_px(6, s)
+        text_block_h = line1.get_height() + gap_head + line2.get_height() + gap_sub + line3.get_height()
+        text_right   = box_x - scale_px(18, s)
+        text_top     = row_cy - text_block_h // 2
+
+        screen.blit(line1, line1.get_rect(right=text_right, top=text_top))
+        y = text_top + line1.get_height() + gap_head
+        screen.blit(line2, line2.get_rect(right=text_right, top=y))
+        y += line2.get_height() + gap_sub
+        screen.blit(line3, line3.get_rect(right=text_right, top=y))
+
+        pygame.draw.rect(screen, WHITE, (box_x, box_y, box, box))
+        screen.blit(gallery_qr_surf, gallery_qr_surf.get_rect(center=(box_x + box // 2, box_y + box // 2)))
+        pygame.draw.rect(screen, INK, (box_x, box_y, box, box), border)
 
 
 def _draw_idle_viewfinder(screen, live_surf, screen_w: int, s: float):
@@ -307,10 +351,10 @@ def _draw_idle_rail(screen, now: float, screen_w: int, screen_h: int, s: float):
 
 
 def render_idle(screen, live_surf, carousel_photos, carousel_start: float, now: float,
-                photo_count: int, screen_w: int, screen_h: int):
+                photo_count: int, screen_w: int, screen_h: int, gallery_qr_surf=None):
     s = fit_scale(screen_w, screen_h)
     screen.fill(GROUND)
-    _draw_idle_header(screen, now, screen_w, s)
+    _draw_idle_header(screen, now, screen_w, s, gallery_qr_surf)
     margin, rule_y = scale_px(_IDLE_MARGIN, s), scale_px(_IDLE_RULE_Y, s)
     pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
     _draw_idle_viewfinder(screen, live_surf, screen_w, s)
@@ -351,11 +395,14 @@ def render_preview(screen, flash_surf, dim_surf, preview_surf, age: float,
 _REV_MARGIN       = 56
 _REV_PLATE        = 112
 _REV_HEADER_Y     = 44
+_REV_BAR_Y        = 166
+_REV_BAR_H        = 10
 _REV_RULE_Y       = 184
 _REV_RAIL_H       = 244
 _REV_GRID_BOTTOM_GAP = 40   # gap between grid bottom and the rail, at design scale
 _REV_FLASH_PERIOD = 0.7
 _REV_FLASH_DIM    = 0.18
+_REV_TIMEOUT_TOTAL = 25.0   # matches main.py's _GRID_TIMEOUT — the bar's full-width reference
 
 _TXT_SECONDS  = "SECONDS TO DECIDE"
 _TXT_LET_GO   = "PRINT IT OR LET IT GO"
@@ -390,6 +437,19 @@ def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: 
     top = header_y + (plate_sz - block_h) // 2
     screen.blit(line1, (tx, top))
     screen.blit(line2, (tx, top + line1.get_height() + line_gap))
+
+
+def _draw_review_bar(screen, time_left: float, screen_w: int, s: float):
+    """Timeline indicator: depletes left-to-right as the auto-return countdown runs out."""
+    margin = scale_px(_REV_MARGIN, s)
+    bar_y  = scale_px(_REV_BAR_Y, s)
+    bar_h  = scale_px(_REV_BAR_H, s)
+    bar_w  = screen_w - margin * 2
+    urgent = time_left <= PREVIEW_URGENT_AT
+    fill_w = max(0, min(bar_w, round(bar_w * time_left / _REV_TIMEOUT_TOTAL)))
+
+    pygame.draw.rect(screen, NEUTRAL_300, (margin, bar_y, bar_w, bar_h))
+    pygame.draw.rect(screen, ACCENT if urgent else INK, (margin, bar_y, fill_w, bar_h))
 
 
 def review_grid_rect(screen_w: int, screen_h: int) -> tuple[int, int, int, int]:
@@ -553,6 +613,7 @@ def render_grid(screen, grid_surfs: list, screen_w: int, screen_h: int,
     s = fit_scale(screen_w, screen_h)
     screen.fill(GROUND)
     _draw_review_header(screen, now, time_left, screen_w, s)
+    _draw_review_bar(screen, time_left, screen_w, s)
     margin, rule_y = scale_px(_REV_MARGIN, s), scale_px(_REV_RULE_Y, s)
     pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
     _draw_review_grid(screen, grid_surfs, screen_w, screen_h)

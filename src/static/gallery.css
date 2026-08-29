@@ -1,0 +1,139 @@
+@font-face { font-family: 'Archivo'; font-weight: 600; src: url('/fonts/Archivo-SemiBold.ttf') format('truetype'); }
+@font-face { font-family: 'Archivo'; font-weight: 700; src: url('/fonts/Archivo-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'Archivo'; font-weight: 800; src: url('/fonts/Archivo-ExtraBold.ttf') format('truetype'); }
+
+:root {
+  --ground: #f3f2f2;
+  --ink: #201e1d;
+  --accent: #ec3013;
+  --accent-dark: #b81f08;
+  --neutral-200: #e2e0de;
+  --neutral-300: #ccc9c7;
+  --neutral-400: #b6b3b0;
+  --neutral-500: #8a8784;
+  --neutral-600: #6e6b68;
+  --neutral-700: #524f4d;
+  --white: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Archivo', system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+}
+
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+
+/* ── Gallery index (3a) ───────────────────────────────────────────────── */
+
+.gallery-header {
+  padding: 14px 22px 18px;
+  border-bottom: 2px solid var(--ink);
+}
+.gallery-title { font: 800 30px/1 'Archivo'; letter-spacing: -.01em; }
+.gallery-count-row {
+  margin-top: 8px;
+  display: flex; align-items: center; gap: 8px;
+  font: 700 13px/1 'Archivo'; letter-spacing: .14em; color: var(--neutral-600);
+}
+.gallery-count-dot { width: 9px; height: 9px; background: var(--accent); }
+
+.utility-row {
+  height: 56px; padding: 0 22px;
+  display: flex; align-items: center;
+  border-bottom: 2px solid var(--neutral-300);
+}
+.select-toggle {
+  flex: 1; height: 36px;
+  border: 2px solid var(--ink); background: none; color: var(--ink);
+  display: flex; align-items: center; padding: 0 12px;
+  font: 700 13px/1 'Archivo'; letter-spacing: .14em;
+}
+body.selecting .select-toggle { background: var(--ink); color: var(--ground); }
+
+.sessions { padding: 0 22px 100px; }
+.session { padding-top: 16px; }
+.session + .session { border-top: 2px solid var(--neutral-300); margin-top: 18px; padding-top: 20px; }
+
+.session-header { display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; }
+.session-time { font: 800 13px/1 'Archivo'; letter-spacing: .16em; }
+.session-meta { font: 700 12px/1 'Archivo'; letter-spacing: .14em; color: var(--neutral-600); }
+
+.session-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.thumb { position: relative; display: block; height: 106px; width: 100%; overflow: hidden; background: var(--neutral-200); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .check {
+  position: absolute; top: 6px; right: 6px; width: 20px; height: 20px;
+  border: 2px solid var(--white); border-radius: 50%; background: rgba(32,30,29,.35);
+  display: none;
+}
+body.selecting .thumb .check { display: block; }
+.thumb.selected .check { background: var(--accent); border-color: var(--accent); }
+
+.session-download {
+  margin-top: 8px; height: 52px; background: var(--accent); color: var(--white);
+  display: flex; align-items: center; gap: 12px; padding: 0 8px 0 14px;
+  border: 0; width: 100%;
+}
+.session-download .label { font: 800 17px/1 'Archivo'; white-space: nowrap; flex: 1; text-align: left; }
+.session-download .strip-thumb { width: 52px; height: 36px; object-fit: cover; display: block; }
+.dl-glyph { width: 17px; height: 17px; flex-shrink: 0; }
+
+.select-bar {
+  display: none; position: fixed; left: 0; right: 0; bottom: 0;
+  max-width: 480px; margin: 0 auto;
+  background: var(--ink); color: var(--white);
+  padding: 14px 22px; align-items: center; justify-content: space-between;
+}
+.select-bar button {
+  background: var(--accent); color: var(--white); border: 0;
+  height: 44px; padding: 0 20px; font: 800 14px/1 'Archivo'; letter-spacing: .1em;
+}
+.select-bar span { font: 700 13px/1 'Archivo'; letter-spacing: .1em; }
+
+/* ── Single photo (3b) ────────────────────────────────────────────────── */
+
+body.dark { background: #141312; color: #f3f2f2; }
+
+.photo-topbar {
+  height: 56px; padding: 0 22px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.photo-back { display: flex; align-items: center; gap: 12px; font: 800 13px/1 'Archivo'; letter-spacing: .16em; }
+.chevron { width: 10px; height: 10px; border-left: 3px solid #f3f2f2; border-bottom: 3px solid #f3f2f2; transform: rotate(45deg); }
+.photo-index { font: 700 13px/1 'Archivo'; letter-spacing: .14em; color: #a8a5a2; }
+
+.photo-main { width: 100%; height: 322px; background: #000; overflow: hidden; }
+.photo-main img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.photo-session-line { padding: 44px 22px 0; font: 800 13px/1 'Archivo'; letter-spacing: .16em; }
+
+.photo-strip { display: flex; gap: 8px; padding: 14px 22px 0; overflow-x: auto; }
+.photo-strip a, .photo-strip span { flex-shrink: 0; width: 70px; height: 48px; display: block; opacity: .5; }
+.photo-strip img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-strip .current { opacity: 1; outline: 3px solid var(--accent); outline-offset: -3px; }
+
+.download-stack { padding: 20px 22px 40px; }
+.download-stack > * + * { margin-top: 10px; }
+.dl-row {
+  height: 60px; width: 100%; border: 0; display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; font: 800 19px/1 'Archivo'; text-align: left;
+}
+.dl-primary { background: var(--accent); color: #fff; }
+.dl-outline { background: none; color: #f3f2f2; border: 2px solid #6d6a67; }
+.download-note {
+  margin-top: 4px; font: 700 13px/1.5 'Archivo'; letter-spacing: .12em; color: #a8a5a2;
+}
+.download-status { margin-top: 10px; font: 700 13px/1.4 'Archivo'; letter-spacing: .1em; color: #a8a5a2; min-height: 18px; }

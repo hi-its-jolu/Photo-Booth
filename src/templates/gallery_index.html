@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tonight's Photos</title>
+<link rel="stylesheet" href="/static/gallery.css">
+</head>
+<body>
+<div class="page">
+
+  <div class="gallery-header">
+    <div class="gallery-title">TONIGHT'S PHOTOS</div>
+    <div class="gallery-count-row"><span class="gallery-count-dot"></span>{{ count }} PHOTOS</div>
+  </div>
+
+  <div class="utility-row">
+    <button class="select-toggle" id="select-toggle">SELECT PHOTOS</button>
+  </div>
+
+  <div class="sessions">
+    {% for s in sessions %}
+    <div class="session">
+      <div class="session-header">
+        <div class="session-time">{{ s.time.strftime('%-I:%M %p') }}</div>
+        <div class="session-meta">{{ s.photos|length }} PHOTO{{ 'S' if s.photos|length != 1 else '' }}{% if s.strip %} &middot; 1 STRIP{% endif %}</div>
+      </div>
+
+      <div class="session-grid">
+        {% for fname in s.photos %}
+        <a class="thumb" href="/photo/{{ s.id }}/{{ loop.index }}" data-download="/download/photos/{{ fname }}">
+          <img src="/photos/{{ fname }}" loading="lazy" alt="">
+          <span class="check"></span>
+        </a>
+        {% endfor %}
+      </div>
+
+      <button class="session-download"
+              data-photo-urls="{{ s.photos|tojson|forceescape }}"
+              data-strip-url="{{ s.strip or '' }}">
+        <svg class="dl-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" x2="12" y1="15" y2="3"/>
+        </svg>
+        <span class="label">DOWNLOAD ALL {{ s.photos|length }}{% if s.strip %} + STRIP{% endif %}</span>
+        {% if s.strip %}<img class="strip-thumb" src="/prints/{{ s.strip }}" alt="">{% endif %}
+      </button>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="select-bar" id="select-bar">
+    <span><span id="select-count">0</span> selected</span>
+    <button id="select-download">DOWNLOAD</button>
+  </div>
+
+</div>
+<script src="/static/gallery.js"></script>
+<script>
+  document.querySelectorAll('.session-download').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const photos = JSON.parse(btn.dataset.photoUrls).map((f) => '/download/photos/' + f);
+      const strip  = btn.dataset.stripUrl ? ['/download/prints/' + btn.dataset.stripUrl] : [];
+      downloadSequential(photos.concat(strip));
+    });
+  });
+  initSelectMode();
+  pollForNewPhotos({{ count }});
+</script>
+</body>
+</html>

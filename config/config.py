@@ -73,6 +73,7 @@ INK          = ( 32,  30,  29)  # text, 2px rules, borders, discard cap
 ACCENT       = (236,  48,  19)  # print cap, urgent timer, live dot
 ACCENT_DARK  = (184,  31,   8)  # print cap outline + 8px drop
 NEUTRAL_200  = (226, 224, 222)  # bottom rail fill
+NEUTRAL_300  = (204, 202, 199)  # countdown bar track (interpolated 200->400; exact token not in the design bundle)
 NEUTRAL_400  = (182, 179, 176)  # 6px drop under white caps
 NEUTRAL_500  = (138, 135, 132)  # 6px drop under discard cap
 NEUTRAL_600  = (110, 107, 104)  # small label text
