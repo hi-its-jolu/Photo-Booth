@@ -162,18 +162,15 @@ REVIEW_MAT_PAD               = 10
 REVIEW_GRID_Y                = 228   # fixed y per the 1920x1080 design (docs/design/README.md)
 
 
-def build_review_grid_surfs(photo_paths: list, screen_w: int, screen_h: int) -> list:
-    """Build the fixed 2x2 review-screen grid: 4 (photo_surf, x, y, cell_w, cell_h)
-    tuples in absolute screen coordinates, scaled to fit screen_w x screen_h.
-    photo_surf is already cropped to fill the cell's inner mat; None where a
-    photo is missing."""
-    s = fit_scale(screen_w, screen_h)
-    grid_w  = scale_px(REVIEW_GRID_W, s)
-    grid_h  = scale_px(REVIEW_GRID_H, s)
-    gap     = scale_px(REVIEW_GRID_GAP, s)
-    mat_pad = scale_px(REVIEW_MAT_PAD, s)
-    grid_x  = (screen_w - grid_w) // 2
-    grid_y  = scale_px(REVIEW_GRID_Y, s)
+def build_review_grid_surfs(photo_paths: list, grid_x: int, grid_y: int, grid_w: int, grid_h: int) -> list:
+    """Build the 2x2 review-screen grid: 4 (photo_surf, x, y, cell_w, cell_h)
+    tuples in absolute screen coordinates, filling the given grid_x/y/w/h rect
+    (see screens.review_grid_rect — the grid is grown to use available space,
+    not just uniformly scaled with the rest of the UI). photo_surf is already
+    cropped to fill the cell's inner mat; None where a photo is missing."""
+    grid_scale = grid_w / REVIEW_GRID_W
+    gap     = scale_px(REVIEW_GRID_GAP, grid_scale)
+    mat_pad = scale_px(REVIEW_MAT_PAD, grid_scale)
 
     cell_w = (grid_w - gap) // 2
     cell_h = (grid_h - gap) // 2

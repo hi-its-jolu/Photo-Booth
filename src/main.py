@@ -28,6 +28,7 @@ from screens   import (
     render_idle, render_countdown, render_preview, render_grid,
     render_printing_compose, render_printing_hold, render_printing_slide,
     draw_thumbnails, draw_printer_status_dot, idle_viewfinder_inner, IDLE_THUMB_H,
+    review_grid_rect,
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -269,7 +270,8 @@ def _advance_after_preview(gs: GameState, screen_w: int, screen_h: int,
     else:
         gs.state           = _STATE_GRID
         gs.grid_enter_time = now
-        gs.grid_surfs      = build_review_grid_surfs(gs.photo_paths, screen_w, screen_h)
+        gx, gy, gw, gh     = review_grid_rect(screen_w, screen_h)
+        gs.grid_surfs      = build_review_grid_surfs(gs.photo_paths, gx, gy, gw, gh)
         gs.qr_surf         = _generate_qr(gs.photo_paths, server_base_url, screen_w, screen_h)
 
 
@@ -321,7 +323,7 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
 
         draw_thumbnails(screen, gs.thumbnails, screen_w, screen_h)
 
-    draw_printer_status_dot(screen, gs.printer_info)
+    #draw_printer_status_dot(screen, gs.printer_info)
     pygame.display.flip()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   gs.running = False

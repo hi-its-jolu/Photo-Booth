@@ -353,6 +353,7 @@ _REV_PLATE        = 112
 _REV_HEADER_Y     = 44
 _REV_RULE_Y       = 184
 _REV_RAIL_H       = 244
+_REV_GRID_BOTTOM_GAP = 40   # gap between grid bottom and the rail, at design scale
 _REV_FLASH_PERIOD = 0.7
 _REV_FLASH_DIM    = 0.18
 
@@ -391,9 +392,34 @@ def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: 
     screen.blit(line2, (tx, top + line1.get_height() + line_gap))
 
 
-def _draw_review_grid(screen, grid_surfs: list, screen_w: int, screen_h: int, s: float):
-    mat_pad = scale_px(REVIEW_MAT_PAD, s)
-    border  = scale_px(2, s)
+def review_grid_rect(screen_w: int, screen_h: int) -> tuple[int, int, int, int]:
+    """Grid x, y, w, h. Grown to fill the available space between the header
+    rule and the bottom rail — preserving the design's aspect ratio — so the
+    photos use as much of the screen as the layout allows, rather than being
+    stuck at a fixed size when there's slack (e.g. a non-16:9 display)."""
+    s = fit_scale(screen_w, screen_h)
+    margin = scale_px(_REV_MARGIN, s)
+    grid_y = scale_px(REVIEW_GRID_Y, s)
+    rail_y = screen_h - scale_px(_REV_RAIL_H, s)
+    bottom_gap = scale_px(_REV_GRID_BOTTOM_GAP, s)
+
+    available_w  = screen_w - margin * 2
+    available_h  = rail_y - bottom_gap - grid_y
+    design_ratio = REVIEW_GRID_W / REVIEW_GRID_H
+
+    if available_w / design_ratio <= available_h:
+        grid_w, grid_h = available_w, round(available_w / design_ratio)
+    else:
+        grid_h, grid_w = available_h, round(available_h * design_ratio)
+
+    return (screen_w - grid_w) // 2, grid_y, grid_w, grid_h
+
+
+def _draw_review_grid(screen, grid_surfs: list, screen_w: int, screen_h: int):
+    grid_x, grid_y, grid_w, grid_h = review_grid_rect(screen_w, screen_h)
+    grid_scale = grid_w / REVIEW_GRID_W
+    mat_pad = scale_px(REVIEW_MAT_PAD, grid_scale)
+    border  = scale_px(2, grid_scale)
     for item in grid_surfs:
         if item is None:
             continue
@@ -403,10 +429,7 @@ def _draw_review_grid(screen, grid_surfs: list, screen_w: int, screen_h: int, s:
             screen.blit(surf, (cx + mat_pad, cy + mat_pad))
         pygame.draw.rect(screen, INK, (cx, cy, cw, ch), border)
 
-    grid_w, grid_h = scale_px(REVIEW_GRID_W, s), scale_px(REVIEW_GRID_H, s)
-    grid_x = (screen_w - grid_w) // 2
-    grid_y = scale_px(REVIEW_GRID_Y, s)
-    logo = _get_logo(scale_px(340, s))
+    logo = _get_logo(scale_px(340, grid_scale))
     if logo is not None:
         screen.blit(logo, logo.get_rect(
             center=(grid_x + grid_w // 2, grid_y + grid_h // 2)))
@@ -532,7 +555,7 @@ def render_grid(screen, grid_surfs: list, screen_w: int, screen_h: int,
     _draw_review_header(screen, now, time_left, screen_w, s)
     margin, rule_y = scale_px(_REV_MARGIN, s), scale_px(_REV_RULE_Y, s)
     pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
-    _draw_review_grid(screen, grid_surfs, screen_w, screen_h, s)
+    _draw_review_grid(screen, grid_surfs, screen_w, screen_h)
 
     rail_h = scale_px(_REV_RAIL_H, s)
     rail_y = screen_h - rail_h

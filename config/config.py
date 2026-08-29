@@ -33,10 +33,10 @@ GRID_PAD           = 20    # px – padding around and between grid cells
 GRID_ACTION_BAR_H  = 100   # px – space at bottom reserved for the action bar
 
 # ── Preview ───────────────────────────────────────────────────────────────────
-PREVIEW_SCALE = 0.75       # fraction of screen the single-photo preview fills
+PREVIEW_SCALE = .75       # fraction of screen the single-photo preview fills
 
 # ── Carousel (idle screen) ────────────────────────────────────────────────────
-CAROUSEL_STRIP_HEIGHT = 132   # px – height of the scrolling photo strip
+CAROUSEL_STRIP_HEIGHT = 200   # px – height of the scrolling photo strip
 CAROUSEL_SCROLL_SPEED = 47    # px/s – how fast photos scroll left
 CAROUSEL_PADDING      = 12    # px – gap between photos in the strip
 
