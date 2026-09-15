@@ -22,13 +22,13 @@ from camera      import grab_live_surface, snap_photo
 from composite   import build_review_grid_surfs, build_composite_surf, build_print_image, fit_scale, scale_px
 from carousel    import load_carousel_photos, count_photos
 from qr          import make_qr_surf
-from printer     import print_polaroid, get_printer_info
+from printer     import print_polaroid, save_polaroid, get_printer_info
 from server      import start_file_server
 from gallery_app import start_gallery_server
 from screens     import (
     render_idle, render_countdown, render_preview, render_grid,
     render_printing_compose, render_printing_hold, render_printing_slide,
-    draw_thumbnails, draw_printer_status_dot, idle_viewfinder_inner, IDLE_THUMB_H,
+    draw_thumbnails, draw_printer_status_icon, idle_viewfinder_inner, IDLE_THUMB_H,
     review_grid_rect, idle_gallery_qr_size,
 )
 
@@ -78,6 +78,7 @@ class GameState:
         self.print_phase_start = 0.0
         self.print_qty         = PRINT_QTY_DEFAULT
         self.prints_done       = 0
+        self.save_mode         = False
         self.qr_surf           = None
         self.grid_enter_time   = 0.0
         self.printer_info: dict       = {}
@@ -166,18 +167,37 @@ def _reset_carousel(screen_w: int, screen_h: int):
     return photos, start
 
 
+def _session_print_path(session_id: str) -> str:
+    return os.path.join(_PRINTS_DIR, f"print_{session_id}.jpg")
+
+
 def _generate_qr(photo_paths: list, session_id: str, server_base_url: str, screen_w: int, screen_h: int) -> pygame.Surface | None:
     try:
         os.makedirs(_PRINTS_DIR, exist_ok=True)
         pil_img = build_print_image(photo_paths)
-        fname   = f"print_{session_id}.jpg"
-        fpath   = os.path.join(_PRINTS_DIR, fname)
+        fpath   = _session_print_path(session_id)
         pil_img.save(fpath, _JPEG_FORMAT, quality=_JPEG_QUALITY, dpi=_PRINT_DPI)
         qr_size = scale_px(_QR_SIZE, fit_scale(screen_w, screen_h))
-        return make_qr_surf(f"{server_base_url}/{fname}", size=qr_size)
+        return make_qr_surf(f"{server_base_url}/{os.path.basename(fpath)}", size=qr_size)
     except Exception as e:
         print(f"QR generation failed: {e}")
         return None
+
+
+def _discard_session(gs: GameState) -> None:
+    """Delete every file captured for the current session — the shots and the
+    print-ready composite — so a discarded session leaves no trace in the
+    whole-event gallery or the idle-screen carousel/count."""
+    for path in gs.photo_paths:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+    if gs.session_id:
+        try:
+            os.remove(_session_print_path(gs.session_id))
+        except OSError:
+            pass
 
 
 # ── Per-state tick functions ──────────────────────────────────────────────────
@@ -191,12 +211,15 @@ def _tick_printing(gs: GameState, screen, now: float) -> None:
         render_printing_compose(screen, gs.grid_surfs, cs, cr,
                                 min(1.0, elapsed / PRINT_COMPOSE_DUR), gs.prints_done)
         if elapsed >= PRINT_COMPOSE_DUR:
-            print_polaroid(gs.photo_paths, 1)
+            if gs.save_mode:
+                save_polaroid(gs.photo_paths)
+            else:
+                print_polaroid(gs.photo_paths, 1)
             gs.print_phase, gs.print_phase_start = _PHASE_HOLD, now
 
     elif gs.print_phase == _PHASE_HOLD:
         sw, sh = screen.get_size()
-        render_printing_hold(screen, cs, cr, sw, sh, now, gs.prints_done, gs.print_qty)
+        render_printing_hold(screen, cs, cr, sw, sh, now, gs.prints_done, gs.print_qty, gs.save_mode)
         if elapsed >= PRINT_HOLD_DUR:
             gs.print_phase, gs.print_phase_start = _PHASE_SLIDE, now
 
@@ -213,25 +236,33 @@ def _tick_printing(gs: GameState, screen, now: float) -> None:
 
 def _tick_grid(gs: GameState, screen, screen_w: int, screen_h: int, now: float) -> None:
     """Render the grid/review screen and handle its keyboard events."""
+    printer_connected = gs.printer_info.get("ok", False)
     time_left = max(0.0, _GRID_TIMEOUT - (now - gs.grid_enter_time))
-    render_grid(screen, gs.grid_surfs, screen_w, screen_h, now, time_left, gs.print_qty, gs.qr_surf)
+    render_grid(screen, gs.grid_surfs, screen_w, screen_h, now, time_left, gs.print_qty, gs.qr_surf,
+               printer_connected)
     if time_left <= 0:
         gs.go_idle()
         return
     for event in pygame.event.get():
         if   event.type == pygame.QUIT:                        gs.running = False
-        elif event.type == pygame.KEYDOWN: _handle_grid_key(gs, screen, screen_w, screen_h, now, event.key)
+        elif event.type == pygame.KEYDOWN:
+            _handle_grid_key(gs, screen, screen_w, screen_h, now, event.key, printer_connected)
 
 
-def _handle_grid_key(gs: GameState, screen, screen_w: int, screen_h: int, now: float, key) -> None:
+def _handle_grid_key(gs: GameState, screen, screen_w: int, screen_h: int, now: float, key,
+                     printer_connected: bool) -> None:
     if   key == pygame.K_ESCAPE:                              gs.running = False
-    elif key == pygame.K_RIGHT:                               gs.print_qty = min(PRINT_QTY_MAX, gs.print_qty + 1)
-    elif key == pygame.K_LEFT:                                gs.print_qty = max(PRINT_QTY_MIN, gs.print_qty - 1)
-    elif key in (pygame.K_DELETE, pygame.K_BACKSPACE):        gs.go_idle()
+    elif key == pygame.K_RIGHT and printer_connected:         gs.print_qty = min(PRINT_QTY_MAX, gs.print_qty + 1)
+    elif key == pygame.K_LEFT  and printer_connected:         gs.print_qty = max(PRINT_QTY_MIN, gs.print_qty - 1)
+    elif key in (pygame.K_DELETE, pygame.K_BACKSPACE):
+        _discard_session(gs)
+        gs.go_idle()
     elif key == pygame.K_p:
         gs.composite_surf    = build_composite_surf(gs.photo_paths, screen_w, screen_h)
         gs.composite_rect    = gs.composite_surf.get_rect(center=(screen_w // 2, screen_h // 2))
         gs.prints_done       = 0
+        gs.save_mode         = not printer_connected
+        gs.print_qty         = 1 if gs.save_mode else gs.print_qty
         gs.print_phase       = _PHASE_COMPOSE
         gs.print_phase_start = now
         gs.qr_surf           = None
@@ -327,7 +358,7 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
 
         draw_thumbnails(screen, gs.thumbnails, screen_w, screen_h)
 
-    #draw_printer_status_dot(screen, gs.printer_info)
+    #draw_printer_status_icon(screen, gs.printer_info)
     pygame.display.flip()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   gs.running = False
@@ -347,7 +378,7 @@ def _run_loop(gs: GameState, screen, cap, clock, screen_w: int, screen_h: int,
 
         if gs.state == _STATE_PRINTING:
             _tick_printing(gs, screen, now)
-            draw_printer_status_dot(screen, gs.printer_info)
+            draw_printer_status_icon(screen, gs.printer_info)
             pygame.display.flip()
             clock.tick(TARGET_FPS)
             for event in pygame.event.get():
@@ -358,7 +389,7 @@ def _run_loop(gs: GameState, screen, cap, clock, screen_w: int, screen_h: int,
 
         if gs.state == _STATE_GRID:
             _tick_grid(gs, screen, screen_w, screen_h, now)
-            draw_printer_status_dot(screen, gs.printer_info)
+            draw_printer_status_icon(screen, gs.printer_info)
             pygame.display.flip()
             clock.tick(TARGET_FPS)
             continue

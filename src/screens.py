@@ -18,33 +18,13 @@ from composite import (
 # ── UI text constants ─────────────────────────────────────────────────────────
 _TXT_PRINTING     = "Printing…"
 _TXT_PRINTING_N   = "Printing copy {done} of {total}…"
-_TXT_INK          = "Ink"
-_TXT_PAPER        = "Paper: {n} sheets"
-_TXT_PRINTER_ICON = "\U0001f5a8  {name}"
-_TXT_NO_PRINTER   = "No Printer Found."
+_TXT_SAVING       = "Saving…"
 
-# ── Printer status colours ────────────────────────────────────────────────────
-_STATUS_COLOR = {
-    "idle":     (80,  200,  80),
-    "printing": (255, 165,   0),
-    "offline":  (255,  80,  80),
-}
+# ── Printer status icon colours ───────────────────────────────────────────────
+_PRINTER_ICON_OK  = ( 90,  90,  90)   # connected — neutral, unobtrusive
+_PRINTER_ICON_BAD = (230,  60,  60)   # disconnected — alert red
 
-_INK_NAMED: dict[str, tuple] = {
-    "black":         ( 55,  55,  55),
-    "photo black":   ( 65,  65,  65),
-    "cyan":          (  0, 188, 212),
-    "light cyan":    (100, 210, 230),
-    "magenta":       (233,  30,  99),
-    "light magenta": (230, 130, 180),
-    "yellow":        (220, 180,   0),
-    "white":         (210, 210, 210),
-    "gray":          (140, 140, 140),
-    "light gray":    (185, 185, 185),
-    "matte black":   ( 80,  80,  80),
-}
-
-# ── Font cache (legacy SysFont, used by printer overlays only) ────────────────
+# ── Font cache (legacy SysFont, used by the printing-animation label) ────────
 _fonts: dict[int, pygame.font.Font] = {}
 
 def _font(size: int) -> pygame.font.Font:
@@ -133,25 +113,6 @@ def _get_logo_by_height(height: int) -> pygame.Surface | None:
             return None
         _logo_aspect = probe.get_width() / probe.get_height()
     return _get_logo(max(1, round(height * _logo_aspect)))
-
-
-# ── Ink colour helper ─────────────────────────────────────────────────────────
-
-def _ink_color(color_str: str) -> tuple:
-    s = color_str.strip().lower()
-    if s in _INK_NAMED:
-        return _INK_NAMED[s]
-    if s.startswith("#") and len(s) == 7:
-        try:
-            r, g, b = int(s[1:3], 16), int(s[3:5], 16), int(s[5:7], 16)
-            if r < 40 and g < 40 and b < 40:
-                return (60, 60, 60)
-            if r > 200 and g > 200 and b < 60:
-                return (220, 180, 0)
-            return (r, g, b)
-        except ValueError:
-            pass
-    return (160, 160, 160)
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -404,17 +365,21 @@ _REV_FLASH_PERIOD = 0.7
 _REV_FLASH_DIM    = 0.18
 _REV_TIMEOUT_TOTAL = 25.0   # matches main.py's _GRID_TIMEOUT — the bar's full-width reference
 
-_TXT_SECONDS  = "SECONDS TO DECIDE"
-_TXT_LET_GO   = "PRINT IT OR LET IT GO"
+_TXT_SECONDS     = "SECONDS TO DECIDE"
+_TXT_LET_GO      = "PRINT IT OR LET IT GO"
+_TXT_LET_GO_SAVE = "SAVE IT OR LET IT GO"
 _TXT_FEWER    = "FEWER"
 _TXT_MORE     = "MORE"
 _TXT_COPIES2  = "COPIES"
 _TXT_SCAN     = "SCAN TO DOWNLOAD"
 _TXT_DISCARD  = "DISCARD"
 _TXT_PRINT2   = "PRINT"
+_TXT_SAVE2    = "SAVE"
+_TXT_SAVE_LBL = "SAVE PHOTOS"
 
 
-def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: float):
+def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: float,
+                        printer_connected: bool = True):
     plate_sz = scale_px(_REV_PLATE, s)
     secs     = max(0, math.ceil(time_left))
     urgent   = time_left <= PREVIEW_URGENT_AT
@@ -430,7 +395,7 @@ def _draw_review_header(screen, now: float, time_left: float, screen_w: int, s: 
 
     size  = scale_px(19, s)
     line1 = _tracked(700, size, _TXT_SECONDS, NEUTRAL_600, 0.20)
-    line2 = _tracked(700, size, _TXT_LET_GO, INK, 0.20)
+    line2 = _tracked(700, size, _TXT_LET_GO if printer_connected else _TXT_LET_GO_SAVE, INK, 0.20)
     tx = margin + plate_sz + scale_px(18, s)
     line_gap = scale_px(4, s)
     block_h = line1.get_height() + line2.get_height() + line_gap
@@ -568,11 +533,15 @@ def _draw_review_qr(screen, qr_surf, screen_w: int, rail_y: int, rail_h: int, s:
     screen.blit(label, label.get_rect(centerx=screen_w // 2, top=box_rect.bottom + gap))
 
 
-def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, print_qty: int, s: float):
+def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, print_qty: int, s: float,
+                         printer_connected: bool = True):
     lbl_sz = scale_px(19, s)
     discard_lbl = _tracked(800, lbl_sz, _TXT_DISCARD, INK, 0.16)
-    qty_word    = "COPY" if print_qty == 1 else "COPIES"
-    print_lbl   = _tracked(800, lbl_sz, f"PRINT {print_qty} {qty_word}", INK, 0.16)
+    if printer_connected:
+        qty_word  = "COPY" if print_qty == 1 else "COPIES"
+        print_lbl = _tracked(800, lbl_sz, f"PRINT {print_qty} {qty_word}", INK, 0.16)
+    else:
+        print_lbl = _tracked(800, lbl_sz, _TXT_SAVE_LBL, INK, 0.16)
 
     d_disc, d_print   = scale_px(112, s), scale_px(148, s)
     action_gap, lbl_gap = scale_px(28, s), scale_px(10, s)
@@ -598,21 +567,23 @@ def _draw_review_actions(screen, right_edge: int, rail_y: int, rail_h: int, prin
     pygame.draw.line(screen, WHITE, (disc_cx - half, disc_cy + half), (disc_cx + half, disc_cy - half), line_w)
     screen.blit(discard_lbl, discard_lbl.get_rect(centerx=disc_cx, top=disc_cy + d_disc // 2 + lbl_gap))
 
-    # Print
+    # Print / Save
+    action_word = _TXT_PRINT2 if printer_connected else _TXT_SAVE2
     print_drop = scale_px(8, s)
     pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy + print_drop), d_print // 2)
     pygame.draw.circle(screen, ACCENT, (print_cx, print_cy), d_print // 2)
     pygame.draw.circle(screen, ACCENT_DARK, (print_cx, print_cy), d_print // 2, border)
-    print_word = _tracked(800, scale_px(30, s), _TXT_PRINT2, WHITE, 0.06)
+    print_word = _tracked(800, scale_px(30, s), action_word, WHITE, 0.06)
     screen.blit(print_word, print_word.get_rect(center=(print_cx, print_cy)))
     screen.blit(print_lbl, print_lbl.get_rect(centerx=print_cx, top=print_cy + d_print // 2 + lbl_gap))
 
 
 def render_grid(screen, grid_surfs: list, screen_w: int, screen_h: int,
-                now: float, time_left: float, print_qty: int = 1, qr_surf=None):
+                now: float, time_left: float, print_qty: int = 1, qr_surf=None,
+                printer_connected: bool = True):
     s = fit_scale(screen_w, screen_h)
     screen.fill(GROUND)
-    _draw_review_header(screen, now, time_left, screen_w, s)
+    _draw_review_header(screen, now, time_left, screen_w, s, printer_connected)
     _draw_review_bar(screen, time_left, screen_w, s)
     margin, rule_y = scale_px(_REV_MARGIN, s), scale_px(_REV_RULE_Y, s)
     pygame.draw.line(screen, INK, (margin, rule_y), (screen_w - margin, rule_y), scale_px(2, s))
@@ -623,9 +594,10 @@ def render_grid(screen, grid_surfs: list, screen_w: int, screen_h: int,
     pygame.draw.rect(screen, NEUTRAL_200, (0, rail_y, screen_w, rail_h))
     pygame.draw.line(screen, INK, (0, rail_y), (screen_w, rail_y), scale_px(2, s))
 
-    _draw_stepper(screen, margin, rail_y, rail_h, print_qty, s)
+    if printer_connected:
+        _draw_stepper(screen, margin, rail_y, rail_h, print_qty, s)
     _draw_review_qr(screen, qr_surf, screen_w, rail_y, rail_h, s)
-    _draw_review_actions(screen, screen_w - margin, rail_y, rail_h, print_qty, s)
+    _draw_review_actions(screen, screen_w - margin, rail_y, rail_h, print_qty, s, printer_connected)
 
 
 # ── Printing animation ────────────────────────────────────────────────────────
@@ -647,13 +619,17 @@ def render_printing_compose(screen, grid_surfs: list, composite_surf, composite_
 
 
 def render_printing_hold(screen, composite_surf, composite_rect, screen_w: int,
-                         screen_h: int, now: float, prints_done: int = 0, print_qty: int = 1):
+                         screen_h: int, now: float, prints_done: int = 0, print_qty: int = 1,
+                         save_mode: bool = False):
     """Phase 2: composite fully visible with a pulsing status label."""
     screen.fill((20, 20, 20))
     composite_surf.set_alpha(255)
     _draw_shadow_composite(screen, composite_surf, composite_rect)
-    label = (_TXT_PRINTING_N.format(done=prints_done + 1, total=print_qty)
-             if print_qty > 1 else _TXT_PRINTING)
+    if save_mode:
+        label = _TXT_SAVING
+    else:
+        label = (_TXT_PRINTING_N.format(done=prints_done + 1, total=print_qty)
+                 if print_qty > 1 else _TXT_PRINTING)
     pulse = int(160 + 95 * math.sin(now * 2.8))
     txt   = _font(64).render(label, True, (255, 255, 255))
     txt.set_alpha(pulse)
@@ -671,78 +647,61 @@ def render_printing_slide(screen, composite_surf, composite_rect, t: float, scre
     _draw_shadow_composite(screen, composite_surf, moved)
 
 
-# ── Printer status widgets ────────────────────────────────────────────────────
+# ── Printer status icon ───────────────────────────────────────────────────────
+# One unified silhouette (body + output slot + top sheet) for both states —
+# connected adds wifi arcs above it, disconnected adds a badge X over its
+# bottom-right corner. Stroke-only so it reads on both light and dark screens.
+# See assets/icons/printer-connected.svg / printer-disconnected.svg for the
+# same design as a standalone source-of-truth asset.
 
-def draw_printer_status_dot(surf: pygame.Surface, info: dict):
-    """Single coloured dot in the top-right corner indicating printer state."""
-    color = _STATUS_COLOR.get(info.get("status", "offline"), (255, 80, 80))
-    pygame.draw.circle(surf, color, (surf.get_width() - 28, 28), 10)
-
-
-def draw_printer_warning(surf: pygame.Surface):
-    """Small red printer icon + label shown during countdown / preview."""
-    ox, oy = 14, 14
-    c = (255, 80, 80)
-    pygame.draw.rect(surf, c, (ox + 8, oy,       14, 5))
-    pygame.draw.rect(surf, c, (ox,     oy + 5,   30, 18))
-    pygame.draw.rect(surf, (20, 20, 20), (ox + 5, oy + 13, 20, 4))
-    pygame.draw.rect(surf, c, (ox + 8, oy + 23,  14, 7))
-    txt = _font(36).render(_TXT_NO_PRINTER, True, c)
-    surf.blit(txt, txt.get_rect(left=ox + 38, centery=oy + 16))
+_PRINTER_ICON_SIZE   = 34   # px, at design scale — top-right corner
+_PRINTER_ICON_MARGIN = 22
 
 
-def _draw_ink_bars(surf, ink: list, card_x: int, cy: int, card_w: int, pad: int) -> int:
-    """Draw one ink level bar per entry. Returns the new cy after all bars."""
-    bar_x     = card_x + pad + 80
-    bar_max_w = card_w - pad * 2 - 80 - 36
-    low_ink   = 20
-    for entry in ink:
-        nm, level, col = entry["name"], entry["level"], _ink_color(entry.get("color", entry["name"]))
-        surf.blit(_font(22).render(nm[:11], True, (155, 155, 155)), (card_x + pad, cy + 1))
-        pygame.draw.rect(surf, (45, 45, 45), (bar_x, cy + 4, bar_max_w, 12), border_radius=4)
-        if 0 <= level <= 100:
-            bar_col = (220, 60, 60) if level <= low_ink else col
-            pygame.draw.rect(surf, bar_col, (bar_x, cy + 4, max(1, int(bar_max_w * level / 100)), 12), border_radius=4)
-            pct_col = (220, 60, 60) if level <= low_ink else (175, 175, 175)
-            surf.blit(_font(20).render(f"{level}%", True, pct_col), (bar_x + bar_max_w + 4, cy))
-        else:
-            surf.blit(_font(20).render("N/A", True, (90, 90, 90)), (bar_x + bar_max_w + 4, cy))
-        cy += 26
-    return cy
+def _draw_printer_glyph(surf, cx: int, top: int, size: int, color) -> tuple:
+    """Printer body + top sheet + output slot, centered on `cx` with its top
+    edge at `top`. Returns (body_rect, sheet_rect) for the caller to decorate."""
+    w = max(2, round(size * 0.09))
+
+    sheet = pygame.Rect(0, 0, round(size * 0.46), round(size * 0.34))
+    sheet.centerx, sheet.top = cx, top
+    pygame.draw.rect(surf, color, sheet, w)
+
+    body = pygame.Rect(0, 0, round(size * 0.82), round(size * 0.42))
+    body.centerx, body.top = cx, sheet.bottom - round(size * 0.06)
+    pygame.draw.rect(surf, color, body, w, border_radius=max(1, round(size * 0.06)))
+
+    slot = pygame.Rect(0, 0, round(size * 0.5), max(2, round(size * 0.05)))
+    slot.centerx, slot.centery = cx, body.bottom - round(body.height * 0.3)
+    pygame.draw.rect(surf, color, slot)
+
+    return body, sheet
 
 
-def draw_printer_card(surf: pygame.Surface, info: dict):
-    """Draw a printer status card in the top-right corner."""
-    has_ink   = bool(info.get("ink"))
-    has_paper = info.get("paper") is not None
-    ink_rows  = len(info["ink"]) if has_ink else 0
-    card_w, pad, margin = 280, 12, 18
-    card_h = pad * 2 + 24 + 24 + ((24 + ink_rows * 26) if has_ink else 0) + (24 if has_paper else 0) + 6
-    x, y   = surf.get_width() - card_w - margin, margin
+def draw_printer_status_icon(surf: pygame.Surface, info: dict):
+    """Unified top-right printer glyph: neutral with wifi arcs when a printer
+    is reachable, red with an X badge when none is found."""
+    connected = bool(info.get("ok"))
+    size  = _PRINTER_ICON_SIZE
+    color = _PRINTER_ICON_OK if connected else _PRINTER_ICON_BAD
+    cx  = surf.get_width() - _PRINTER_ICON_MARGIN - size // 2
+    top = _PRINTER_ICON_MARGIN
+    body, sheet = _draw_printer_glyph(surf, cx, top, size, color)
 
-    pygame.draw.rect(surf, (18, 18, 18), (x, y, card_w, card_h), border_radius=8)
-    pygame.draw.rect(surf, (55, 55, 55), (x, y, card_w, card_h), 1, border_radius=8)
-    cy = y + pad
-
-    name = (info["name"] or "Unknown")[:22]
-    surf.blit(_font(26).render(_TXT_PRINTER_ICON.format(name=name), True, (210, 210, 210)), (x + pad, cy))
-    cy += 28
-
-    status = info.get("status", "offline")
-    sc     = _STATUS_COLOR.get(status, (160, 160, 160))
-    pygame.draw.circle(surf, sc, (x + pad + 7, cy + 12), 5)
-    surf.blit(_font(24).render(status.capitalize(), True, sc), (x + pad + 18, cy))
-    cy += 30
-
-    pygame.draw.line(surf, (45, 45, 45), (x + pad, cy), (x + card_w - pad, cy))
-    cy += 8
-
-    if has_ink:
-        surf.blit(_font(22).render(_TXT_INK, True, (120, 120, 120)), (x + pad, cy))
-        cy += 24
-        cy = _draw_ink_bars(surf, info["ink"], x, cy, card_w, pad)
-    if has_paper:
-        surf.blit(_font(24).render(_TXT_PAPER.format(n=info["paper"]), True, (175, 175, 175)), (x + pad, cy))
+    if connected:
+        w = max(2, round(size * 0.09))
+        arc_bottom = sheet.top - round(size * 0.06)
+        for r in (round(size * 0.32), round(size * 0.20)):
+            rect = pygame.Rect(0, 0, r * 2, r * 2)
+            rect.centerx, rect.bottom = cx, arc_bottom + r
+            pygame.draw.arc(surf, color, rect, math.radians(25), math.radians(155), w)
+        pygame.draw.circle(surf, color, (cx, arc_bottom), max(1, round(size * 0.05)))
+    else:
+        half = round(size * 0.20)
+        lw   = max(2, round(size * 0.11))
+        bx, by = body.right, body.bottom
+        pygame.draw.line(surf, color, (bx - half, by - half), (bx + half, by + half), lw)
+        pygame.draw.line(surf, color, (bx - half, by + half), (bx + half, by - half), lw)
 
 
 # ── Thumbnail strip ───────────────────────────────────────────────────────────

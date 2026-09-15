@@ -4,7 +4,10 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
-assets/
+assets/*
+!assets/fonts/
+!assets/icons/
 photos/
 prints/
+docs/design/
 /.claude

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="color:#5a5a5a">
+  <!-- Printer reachable: wifi arcs above the unified printer glyph. -->
+  <defs>
+    <clipPath id="wifi-cap">
+      <rect x="0" y="0" width="100" height="34" />
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#wifi-cap)">
+    <circle cx="50" cy="34" r="24" />
+    <circle cx="50" cy="34" r="14" />
+  </g>
+  <circle cx="50" cy="34" r="2.2" fill="currentColor" stroke="none" />
+
+  <!-- Sheet feeding into the printer -->
+  <rect x="31" y="40" width="38" height="26" rx="2" />
+
+  <!-- Printer body -->
+  <rect x="16" y="62" width="68" height="30" rx="5" />
+
+  <!-- Output slot -->
+  <rect x="32" y="80" width="36" height="4" fill="currentColor" stroke="none" />
+</svg>

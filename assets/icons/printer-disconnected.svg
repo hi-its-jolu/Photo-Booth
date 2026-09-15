@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="color:#e63c3c">
+  <!-- No printer found: same unified glyph as printer-connected.svg, with an
+       X badge over the body's corner instead of wifi arcs. -->
+
+  <!-- Sheet feeding into the printer -->
+  <rect x="31" y="40" width="38" height="26" rx="2" />
+
+  <!-- Printer body -->
+  <rect x="16" y="62" width="68" height="30" rx="5" />
+
+  <!-- Output slot -->
+  <rect x="32" y="80" width="36" height="4" fill="currentColor" stroke="none" />
+
+  <!-- Badge, overlapping the body's bottom-right corner -->
+  <line x1="70" y1="76" x2="94" y2="100" stroke-width="7" />
+  <line x1="94" y1="76" x2="70" y2="100" stroke-width="7" />
+</svg>
