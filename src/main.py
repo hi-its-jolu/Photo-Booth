@@ -422,7 +422,13 @@ def main():
 
     snd_beep    = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_BEEP))
     snd_shutter = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_SHUTTER))
-    screen      = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.SCALED, vsync=1)
+    # pygame.SCALED (needed for vsync, to avoid tearing on kmsdrm) doesn't
+    # accept (0, 0) as "use the current resolution" the way plain FULLSCREEN
+    # does - it needs an explicit size, so look up the current mode first.
+    _display_info = pygame.display.Info()
+    screen      = pygame.display.set_mode(
+        (_display_info.current_w, _display_info.current_h),
+        pygame.FULLSCREEN | pygame.SCALED, vsync=1)
     pygame.display.set_caption(_WINDOW_CAPTION)
     pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
