@@ -8,6 +8,14 @@ ASSETS_DIR  = os.path.join(os.path.dirname(__file__), "..", "assets")
 # ── Hardware ──────────────────────────────────────────────────────────────────
 CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camera)
 
+# Some UVC webcams (this one included) come up under Linux/V4L2 with very
+# conservative saturation/contrast defaults, giving a washed-out image even
+# though the hardware is fine. 0-255, matching the driver's own range (check
+# with `v4l2-ctl -d /dev/video0 --list-ctrls`). Set to None to leave the
+# driver default alone (e.g. on macOS, where these props don't apply).
+CAMERA_SATURATION = 150
+CAMERA_CONTRAST   = 128
+
 # ── Session ───────────────────────────────────────────────────────────────────
 TOTAL_PHOTOS       = 4     # number of photos per session
 COUNTDOWN_SECONDS  = 3     # seconds on the countdown timer

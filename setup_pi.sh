@@ -33,17 +33,24 @@ sudo apt-get install -y \
   git python3-venv python3-pip \
   libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0 \
   libjpeg62-turbo libopenjp2-7 libtiff6 \
+  libegl1 libgles2 \
   alsa-utils \
-  cups cups-client
+  cups cups-client \
+  swig python3-dev build-essential liblgpio-dev \
+  python3-pygame
 
 # App user needs: lpadmin (configure printers), gpio/video/render (draw to
 # the screen + read GPIO buttons without root), input (read USB/GPIO input).
 sudo usermod -aG lpadmin,gpio,video,render,input "$APP_USER"
 
 # ── Python virtual environment ────────────────
+# --system-site-packages so the venv can see the apt-installed python3-pygame
+# below - the PyPI pygame wheel bundles its own private SDL2 build with no
+# kmsdrm support, so it can't render fullscreen without a desktop/X11. The
+# Raspberry Pi Foundation's own apt package is built with kmsdrm enabled.
 if [ ! -d "$VENV_DIR" ]; then
   echo "📦 Creating virtual environment..."
-  python3 -m venv "$VENV_DIR"
+  python3 -m venv --system-site-packages "$VENV_DIR"
 fi
 source "$VENV_DIR/bin/activate"
 
@@ -51,11 +58,14 @@ pip install --upgrade pip --quiet
 echo "📦 Installing Python dependencies..."
 pip install -r "$REPO_DIR/requirements.txt" --quiet
 
+# Use the system pygame (see note above) instead of the PyPI wheel.
+pip uninstall -y pygame --quiet 2>/dev/null || true
+
 # Swap in the headless OpenCV build - the app never opens cv2's own GUI
 # window (pygame owns the display), and headless skips the Qt/GTK deps
 # that are a pain to install on Pi OS Lite.
 pip uninstall -y opencv-python --quiet 2>/dev/null || true
-pip install opencv-python-headless --quiet
+pip install "opencv-python-headless>=4.8,<5.0" --quiet
 
 # Arcade button support (config/config.py's GPIO_BUTTON_* pins). Classic
 # RPi.GPIO doesn't support the GPIO chip on newer Pi OS/Pi 5 - rpi-lgpio
@@ -91,6 +101,22 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable "${SERVICE_NAME}.service"
 
+# ── Console auto-login ────────────────────────
+# No keyboard/monitor needed after boot - the booth is meant to run
+# headless, reachable only over SSH.
+echo "🔓 Enabling console auto-login for ${APP_USER}..."
+if command -v raspi-config &>/dev/null; then
+  sudo raspi-config nonint do_boot_behaviour B2
+else
+  sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
+  sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin ${APP_USER} --noclear %I \$TERM
+EOF
+  sudo systemctl daemon-reload
+fi
+
 # ── Safe shutdown button ──────────────────────
 # A momentary button wired between GPIO3 (physical pin 5) and any GND pin
 # (e.g. pin 6, right next to it) triggers a clean shutdown at the kernel
@@ -119,8 +145,8 @@ echo "  journalctl -u ${SERVICE_NAME} -f         # live logs"
 echo "  sudo systemctl stop ${SERVICE_NAME}      # stop it"
 echo "  sudo systemctl disable ${SERVICE_NAME}   # stop launching it on boot"
 echo ""
-echo "⚠️  You were just added to the gpio/video/render/input groups, and the"
-echo "   safe-shutdown button needs a reboot to take effect:"
+echo "⚠️  You were just added to the gpio/video/render/input groups, and both"
+echo "   auto-login and the safe-shutdown button need a reboot to take effect:"
 echo "     sudo reboot"
 echo ""
 echo "🔌 Safe shutdown: wire a momentary button between GPIO3 (physical pin 5)"

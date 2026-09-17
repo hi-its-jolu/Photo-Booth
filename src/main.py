@@ -8,7 +8,8 @@ import cv2
 import pygame
 
 from config.config import (
-    PHOTOS_DIR, CAMERA_INDEX, COUNTDOWN_SECONDS, TOTAL_PHOTOS,
+    PHOTOS_DIR, CAMERA_INDEX, CAMERA_SATURATION, CAMERA_CONTRAST,
+    COUNTDOWN_SECONDS, TOTAL_PHOTOS,
     PREVIEW_DURATION, TARGET_FPS,
     AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER,
     CAROUSEL_SCROLL_SPEED, CAROUSEL_PADDING,
@@ -409,6 +410,10 @@ def main():
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
         raise RuntimeError(f"Could not open webcam (index {CAMERA_INDEX})")
+    if CAMERA_SATURATION is not None:
+        cap.set(cv2.CAP_PROP_SATURATION, CAMERA_SATURATION)
+    if CAMERA_CONTRAST is not None:
+        cap.set(cv2.CAP_PROP_CONTRAST, CAMERA_CONTRAST)
 
     pygame.mixer.pre_init(AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER)
     pygame.init()
@@ -417,7 +422,7 @@ def main():
 
     snd_beep    = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_BEEP))
     snd_shutter = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_SHUTTER))
-    screen      = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    screen      = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.SCALED, vsync=1)
     pygame.display.set_caption(_WINDOW_CAPTION)
     pygame.mouse.set_visible(False)
     clock = pygame.time.Clock()
