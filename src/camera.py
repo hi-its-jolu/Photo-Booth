@@ -1,8 +1,21 @@
 import os
 import cv2
+import numpy as np
 import pygame
 
-from config.config import PHOTOS_DIR, THUMB_HEIGHT, PREVIEW_SCALE
+from config.config import PHOTOS_DIR, THUMB_HEIGHT, PREVIEW_SCALE, CAMERA_SATURATION_BOOST
+
+
+def _boost_saturation(frame_bgr):
+    """Boost saturation in software, in HSV space, on an already-captured
+    frame - this never touches the camera's own auto-exposure/white-balance,
+    unlike setting the driver's saturation control directly (which caused a
+    bad blue color cast on this camera)."""
+    if not CAMERA_SATURATION_BOOST or CAMERA_SATURATION_BOOST == 1.0:
+        return frame_bgr
+    hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV).astype(np.float32)
+    hsv[..., 1] = np.clip(hsv[..., 1] * CAMERA_SATURATION_BOOST, 0, 255)
+    return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
 
 
 def _to_rgb(frame_bgr, flip: bool = True):
@@ -37,6 +50,7 @@ def grab_live_surface(cap, screen_w: int, screen_h: int) -> pygame.Surface | Non
     ret, frame = cap.read()
     if not ret:
         return None
+    frame = _boost_saturation(frame)
     rgb = _to_rgb(frame)
     h, w = rgb.shape[:2]
     scale = max(screen_w / w, screen_h / h)
@@ -57,6 +71,7 @@ def snap_photo(cap, session_id: str, photo_index: int, screen_w: int, screen_h: 
     ret, snap = cap.read()
     if not ret:
         return None
+    snap = _boost_saturation(snap)
     filename = f"photo_{session_id}_{photo_index + 1}.jpg"
     path = os.path.join(PHOTOS_DIR, filename)
     cv2.imwrite(path, snap)

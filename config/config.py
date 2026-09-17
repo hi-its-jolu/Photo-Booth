@@ -19,6 +19,13 @@ CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camer
 CAMERA_SATURATION = None
 CAMERA_CONTRAST   = None
 
+# Software saturation boost instead (applied to already-captured frames, so
+# it never touches the camera's own auto-exposure/white-balance and can't
+# trigger the issue above). 1.0 = no change; None to disable. 1.7 tested as
+# vivid but clean - much above ~2.0 starts amplifying JPEG noise into visible
+# color speckling.
+CAMERA_SATURATION_BOOST = 1.7
+
 # ── Session ───────────────────────────────────────────────────────────────────
 TOTAL_PHOTOS       = 4     # number of photos per session
 COUNTDOWN_SECONDS  = 3     # seconds on the countdown timer
