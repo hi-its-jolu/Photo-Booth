@@ -24,7 +24,7 @@ CAMERA_CONTRAST   = None
 # trigger the issue above). 1.0 = no change; None to disable. 1.7 tested as
 # vivid but clean - much above ~2.0 starts amplifying JPEG noise into visible
 # color speckling.
-CAMERA_SATURATION_BOOST = 1.7
+CAMERA_SATURATION_BOOST = None
 
 # ── Session ───────────────────────────────────────────────────────────────────
 TOTAL_PHOTOS       = 4     # number of photos per session
