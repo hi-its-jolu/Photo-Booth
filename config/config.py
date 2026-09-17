@@ -13,7 +13,7 @@ CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camer
 # though the hardware is fine. 0-255, matching the driver's own range (check
 # with `v4l2-ctl -d /dev/video0 --list-ctrls`). Set to None to leave the
 # driver default alone (e.g. on macOS, where these props don't apply).
-CAMERA_SATURATION = 150
+CAMERA_SATURATION = 130
 CAMERA_CONTRAST   = 128
 
 # ── Session ───────────────────────────────────────────────────────────────────
