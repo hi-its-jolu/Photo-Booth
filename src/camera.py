@@ -1,25 +1,8 @@
 import os
 import cv2
-import numpy as np
 import pygame
 
 from config.config import PHOTOS_DIR, THUMB_HEIGHT, PREVIEW_SCALE
-
-
-def _gray_world_wb(frame_bgr):
-    """Correct color cast via gray-world white balance: scale each channel so
-    its mean matches the overall mean. This camera's auto-WB overcorrects
-    when a large, uniformly-colored background (e.g. a plain wall) dominates
-    the frame, giving skin tones a strong blue/purple cast - this runs in
-    software on every frame instead, independent of the driver's own AWB."""
-    frame = frame_bgr.astype(np.float32)
-    b, g, r = cv2.split(frame)
-    b_avg, g_avg, r_avg = b.mean(), g.mean(), r.mean()
-    k = (b_avg + g_avg + r_avg) / 3.0
-    b *= k / b_avg
-    g *= k / g_avg
-    r *= k / r_avg
-    return np.clip(cv2.merge([b, g, r]), 0, 255).astype(np.uint8)
 
 
 def _to_rgb(frame_bgr, flip: bool = True):
@@ -54,7 +37,6 @@ def grab_live_surface(cap, screen_w: int, screen_h: int) -> pygame.Surface | Non
     ret, frame = cap.read()
     if not ret:
         return None
-    frame = _gray_world_wb(frame)
     rgb = _to_rgb(frame)
     h, w = rgb.shape[:2]
     scale = max(screen_w / w, screen_h / h)
@@ -75,7 +57,6 @@ def snap_photo(cap, session_id: str, photo_index: int, screen_w: int, screen_h: 
     ret, snap = cap.read()
     if not ret:
         return None
-    snap = _gray_world_wb(snap)
     filename = f"photo_{session_id}_{photo_index + 1}.jpg"
     path = os.path.join(PHOTOS_DIR, filename)
     cv2.imwrite(path, snap)

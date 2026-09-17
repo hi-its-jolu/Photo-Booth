@@ -13,8 +13,11 @@ CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camer
 # though the hardware is fine. 0-255, matching the driver's own range (check
 # with `v4l2-ctl -d /dev/video0 --list-ctrls`). Set to None to leave the
 # driver default alone (e.g. on macOS, where these props don't apply).
-CAMERA_SATURATION = 130
-CAMERA_CONTRAST   = 128
+# Left at None: raising these pushed this camera's auto-exposure/white
+# balance into a bad state (strong blue cast on faces against a plain
+# background) that a software white-balance correction couldn't fully fix.
+CAMERA_SATURATION = None
+CAMERA_CONTRAST   = None
 
 # ── Session ───────────────────────────────────────────────────────────────────
 TOTAL_PHOTOS       = 4     # number of photos per session
