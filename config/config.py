@@ -77,12 +77,12 @@ PRINT_QTY_MAX     = 4      # maximum copies allowed
 # ── GPIO button mapping (BCM pin numbers) ─────────────────────────────────────
 # Wiring: one leg of each button to the GPIO pin, other leg to GND.
 # Set a pin to None to disable that button (e.g. during desktop development).
-GPIO_BUTTON_START  = 17    # Green  – start session (idle) / skip countdown
-GPIO_BUTTON_SNAP   = 27    # Yellow – same as START; useful as a second trigger
-GPIO_BUTTON_PRINT  = 22    # Blue   – print polaroid (grid screen)
-GPIO_BUTTON_RETAKE = 23    # Red    – retake / return to idle (grid screen)
-GPIO_BUTTON_QTY_P  = 24    # Grey   - increase print qty maximum 4
-GPIO_BUTTON_QTY_N  = 25    # Grey   - descrease print qty minimum 1
+GPIO_BUTTON_START  = 17    # Green – start session (idle) / skip countdown / snap
+GPIO_BUTTON_SNAP   = 17    # same pin as START (same physical button, or wire a second button in parallel to pin 17)
+GPIO_BUTTON_PRINT  = 22    # Blue  – print polaroid (grid screen)
+GPIO_BUTTON_RETAKE = 23    # Red   – retake / return to idle (grid screen)
+GPIO_BUTTON_QTY_P  = 24    # White - increase print qty maximum 4
+GPIO_BUTTON_QTY_N  = 25    # White - descrease print qty minimum 1
 
 # ── Design tokens (Modernist design system) ───────────────────────────────────
 # From docs/design/README.md — home (2b) and preview/review (1d) screens.
