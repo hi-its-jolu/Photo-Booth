@@ -9,6 +9,7 @@ import pygame
 
 from config.config import (
     PHOTOS_DIR, CAMERA_INDEX, CAMERA_SATURATION, CAMERA_CONTRAST,
+    CAMERA_FOURCC, CAMERA_WIDTH, CAMERA_HEIGHT,
     COUNTDOWN_SECONDS, TOTAL_PHOTOS,
     PREVIEW_DURATION, TARGET_FPS,
     AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER,
@@ -416,6 +417,14 @@ def main():
         cap.release()
         cap = None
     else:
+        # Format/resolution must be set before other props - some drivers
+        # ignore later changes once streaming parameters are negotiated.
+        if CAMERA_FOURCC:
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*CAMERA_FOURCC))
+        if CAMERA_WIDTH:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
+        if CAMERA_HEIGHT:
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
         if CAMERA_SATURATION is not None:
             cap.set(cv2.CAP_PROP_SATURATION, CAMERA_SATURATION)
         if CAMERA_CONTRAST is not None:

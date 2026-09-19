@@ -19,6 +19,15 @@ CAMERA_INDEX = 0           # OpenCV camera device index (0 = first/default camer
 CAMERA_SATURATION = None
 CAMERA_CONTRAST   = None
 
+# Force compressed capture. Without this, V4L2 may pick an uncompressed
+# (YUYV) mode at the camera's default resolution, which can exceed USB
+# bandwidth and hand back partial/corrupted frames - visible as tearing in
+# both the live preview and the saved photo. MJPG is far smaller per frame
+# and avoids that. Set to None to leave the driver's default format alone.
+CAMERA_FOURCC = "MJPG"
+CAMERA_WIDTH  = 1280
+CAMERA_HEIGHT = 720
+
 # Software saturation boost instead (applied to already-captured frames, so
 # it never touches the camera's own auto-exposure/white-balance and can't
 # trigger the issue above). 1.0 = no change; None to disable. 1.7 tested as
