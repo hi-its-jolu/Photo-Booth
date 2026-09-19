@@ -37,7 +37,7 @@ from screens     import (
 
 _PRINTS_DIR     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "prints")
 _SFX_DIR        = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "sfx")
-_GRID_TIMEOUT   = 25.0
+_GRID_TIMEOUT   = 30.0
 _QR_SIZE        = 124   # design-scale px; actual size is scaled to fit the real screen
 _GALLERY_PORT   = 8081  # serves PHOTOS_DIR (every shot of the night) for the home-screen QR
 _SFX_BEEP       = "count_down_beep.mp3"
@@ -242,12 +242,27 @@ def _tick_grid(gs: GameState, screen, screen_w: int, screen_h: int, now: float) 
     render_grid(screen, gs.grid_surfs, screen_w, screen_h, now, time_left, gs.print_qty, gs.qr_surf,
                printer_connected)
     if time_left <= 0:
-        gs.go_idle()
+        # Timeout never spends a physical print unattended - always save digitally,
+        # even if a printer is connected (that's a guest's explicit P-key choice).
+        _start_print_or_save(gs, screen_w, screen_h, now, printer_connected=False)
         return
     for event in pygame.event.get():
         if   event.type == pygame.QUIT:                        gs.running = False
         elif event.type == pygame.KEYDOWN:
             _handle_grid_key(gs, screen, screen_w, screen_h, now, event.key, printer_connected)
+
+
+def _start_print_or_save(gs: GameState, screen_w: int, screen_h: int, now: float,
+                         printer_connected: bool) -> None:
+    gs.composite_surf    = build_composite_surf(gs.photo_paths, screen_w, screen_h)
+    gs.composite_rect    = gs.composite_surf.get_rect(center=(screen_w // 2, screen_h // 2))
+    gs.prints_done       = 0
+    gs.save_mode         = not printer_connected
+    gs.print_qty         = 1 if gs.save_mode else gs.print_qty
+    gs.print_phase       = _PHASE_COMPOSE
+    gs.print_phase_start = now
+    gs.qr_surf           = None
+    gs.state             = _STATE_PRINTING
 
 
 def _handle_grid_key(gs: GameState, screen, screen_w: int, screen_h: int, now: float, key,
@@ -259,15 +274,7 @@ def _handle_grid_key(gs: GameState, screen, screen_w: int, screen_h: int, now: f
         _discard_session(gs)
         gs.go_idle()
     elif key == pygame.K_p:
-        gs.composite_surf    = build_composite_surf(gs.photo_paths, screen_w, screen_h)
-        gs.composite_rect    = gs.composite_surf.get_rect(center=(screen_w // 2, screen_h // 2))
-        gs.prints_done       = 0
-        gs.save_mode         = not printer_connected
-        gs.print_qty         = 1 if gs.save_mode else gs.print_qty
-        gs.print_phase       = _PHASE_COMPOSE
-        gs.print_phase_start = now
-        gs.qr_surf           = None
-        gs.state             = _STATE_PRINTING
+        _start_print_or_save(gs, screen_w, screen_h, now, printer_connected)
 
 
 def _tick_countdown_frame(gs: GameState, screen, screen_w: int, screen_h: int, now: float,

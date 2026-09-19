@@ -80,7 +80,7 @@ PRINT_QTY_MAX     = 4      # maximum copies allowed
 # POC wiring keeps all six buttons on one side of the 40-pin header.
 GPIO_BUTTON_START  = 22    # Green – start session (idle) / skip countdown / snap
 GPIO_BUTTON_SNAP   = 26    # Green – twin button, one per side (L/R hand access + redundancy), same action as START
-GPIO_BUTTON_PRINT  = 6     # Blue  – print polaroid (grid screen)
+GPIO_BUTTON_PRINT  = 13    # Blue  – print polaroid (grid screen)
 GPIO_BUTTON_RETAKE = 5     # Red   – retake / return to idle (grid screen)
 GPIO_BUTTON_QTY_P  = 17    # White - increase print qty maximum 4
 GPIO_BUTTON_QTY_N  = 27    # White - descrease print qty minimum 1

@@ -363,11 +363,11 @@ _REV_RAIL_H       = 244
 _REV_GRID_BOTTOM_GAP = 40   # gap between grid bottom and the rail, at design scale
 _REV_FLASH_PERIOD = 0.7
 _REV_FLASH_DIM    = 0.18
-_REV_TIMEOUT_TOTAL = 25.0   # matches main.py's _GRID_TIMEOUT — the bar's full-width reference
+_REV_TIMEOUT_TOTAL = 30.0   # matches main.py's _GRID_TIMEOUT — the bar's full-width reference
 
 _TXT_SECONDS     = "SECONDS TO DECIDE"
-_TXT_LET_GO      = "PRINT IT OR LET IT GO"
-_TXT_LET_GO_SAVE = "SAVE IT OR LET IT GO"
+_TXT_LET_GO      = "PRINT IT"
+_TXT_LET_GO_SAVE = "SCAN THE QR CODE TO DOWNLOAD IT"
 _TXT_FEWER    = "FEWER"
 _TXT_MORE     = "MORE"
 _TXT_COPIES2  = "COPIES"
