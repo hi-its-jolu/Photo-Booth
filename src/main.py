@@ -310,9 +310,9 @@ def _advance_after_preview(gs: GameState, screen_w: int, screen_h: int,
         gs.qr_surf         = _generate_qr(gs.photo_paths, gs.session_id, server_base_url, screen_w, screen_h)
 
 
-def _handle_live_key(gs: GameState, key, now: float) -> None:
+def _handle_live_key(gs: GameState, key, now: float, cap) -> None:
     if   key == pygame.K_ESCAPE:                                          gs.running = False
-    elif key == pygame.K_SPACE and gs.state == _STATE_IDLE:
+    elif key == pygame.K_SPACE and gs.state == _STATE_IDLE and cap is not None:
         gs.clear_session()
         gs.session_id = time.strftime("%Y%m%d_%H%M%S")
         gs.photo_index, gs.last_beep_num = 0, -1
@@ -321,15 +321,13 @@ def _handle_live_key(gs: GameState, key, now: float) -> None:
     elif key == pygame.K_SPACE and gs.state == _STATE_COUNTDOWN:          gs.skip_countdown = True
 
 
-def _render_idle_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int, now: float) -> bool:
-    """Render one frame of the idle screen. Returns False on camera failure."""
+def _render_idle_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int, now: float) -> None:
+    """Render one frame of the idle screen. live_box is None with no webcam connected;
+    render_idle already draws the viewfinder box empty in that case."""
     vf_w, vf_h = idle_viewfinder_inner(screen_w, screen_h)
     live_box = grab_live_surface(cap, vf_w, vf_h)
-    if live_box is None:
-        return False
     render_idle(screen, live_box, gs.carousel_photos, gs.carousel_start, now,
                 gs.photo_count, screen_w, screen_h, gs.gallery_qr_surf)
-    return True
 
 
 def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int, now: float,
@@ -337,9 +335,7 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
                        photo_labels, countdown_surfs, snd_beep, snd_shutter) -> None:
     """Render one frame of idle / countdown / preview state."""
     if gs.state == _STATE_IDLE:
-        if not _render_idle_frame(gs, screen, cap, screen_w, screen_h, now):
-            gs.running = False
-            return
+        _render_idle_frame(gs, screen, cap, screen_w, screen_h, now)
     else:
         live_surf = grab_live_surface(cap, screen_w, screen_h)
         if live_surf is None:
@@ -363,7 +359,7 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
     pygame.display.flip()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:   gs.running = False
-        elif event.type == pygame.KEYDOWN: _handle_live_key(gs, event.key, now)
+        elif event.type == pygame.KEYDOWN: _handle_live_key(gs, event.key, now, cap)
 
 
 # ── Main game loop ────────────────────────────────────────────────────────────
@@ -409,11 +405,14 @@ def main():
 
     cap = cv2.VideoCapture(CAMERA_INDEX)
     if not cap.isOpened():
-        raise RuntimeError(f"Could not open webcam (index {CAMERA_INDEX})")
-    if CAMERA_SATURATION is not None:
-        cap.set(cv2.CAP_PROP_SATURATION, CAMERA_SATURATION)
-    if CAMERA_CONTRAST is not None:
-        cap.set(cv2.CAP_PROP_CONTRAST, CAMERA_CONTRAST)
+        print(f"Webcam not available (index {CAMERA_INDEX}) - running without live camera")
+        cap.release()
+        cap = None
+    else:
+        if CAMERA_SATURATION is not None:
+            cap.set(cv2.CAP_PROP_SATURATION, CAMERA_SATURATION)
+        if CAMERA_CONTRAST is not None:
+            cap.set(cv2.CAP_PROP_CONTRAST, CAMERA_CONTRAST)
 
     pygame.mixer.pre_init(AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER)
     pygame.init()
@@ -450,7 +449,8 @@ def main():
               vignette, flash_surf, dim_surf,
               photo_labels, countdown_surfs, snd_beep, snd_shutter)
 
-    cap.release()
+    if cap is not None:
+        cap.release()
     pygame.quit()
     gpio_cleanup()
 

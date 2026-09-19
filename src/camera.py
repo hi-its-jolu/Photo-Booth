@@ -46,7 +46,10 @@ def make_preview(frame_bgr, screen_w: int, screen_h: int, flip: bool = True) -> 
 
 
 def grab_live_surface(cap, screen_w: int, screen_h: int) -> pygame.Surface | None:
-    """Read one camera frame and return a fullscreen pygame Surface, or None on failure."""
+    """Read one camera frame and return a fullscreen pygame Surface, or None on failure
+    (including when `cap` is None because no webcam was found at startup)."""
+    if cap is None:
+        return None
     ret, frame = cap.read()
     if not ret:
         return None
@@ -68,6 +71,8 @@ def snap_photo(cap, session_id: str, photo_index: int, screen_w: int, screen_h: 
     `session_id` is shared by all photos (and the print) in one session, so the
     gallery can group them — capture timing means each shot lands in a
     different wall-clock second, so a fresh per-photo timestamp won't do."""
+    if cap is None:
+        return None
     ret, snap = cap.read()
     if not ret:
         return None
