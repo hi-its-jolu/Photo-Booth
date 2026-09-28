@@ -94,6 +94,17 @@ GPIO_BUTTON_RETAKE = 5     # Red   – retake / return to idle (grid screen)
 GPIO_BUTTON_QTY_P  = 17    # White - increase print qty maximum 4
 GPIO_BUTTON_QTY_N  = 27    # White - descrease print qty minimum 1
 
+# ── GPIO status LED (BCM pin number) ──────────────────────────────────────────
+# Wiring: LED anode through a current-limiting resistor (~330Ω) to the GPIO
+# pin, cathode to GND. Set to None to disable (e.g. during desktop development).
+GPIO_LED_WHITE = 6    # White - blinks during the countdown/capture and review phases
+
+# ── LED blink timing (seconds per on/off half-cycle - smaller = faster) ───────
+LED_COUNTDOWN_BLINK      = 0.5    # steady blink for most of the countdown
+LED_COUNTDOWN_BLINK_FAST = 0.1    # rapid blink once the countdown reaches 1
+LED_REVIEW_BLINK_SLOWEST = 0.6    # blink rate the moment it starts, halfway through the review timeout
+LED_REVIEW_BLINK_FASTEST = 0.08   # blink rate as the review timeout reaches 0
+
 # ── Design tokens (Modernist design system) ───────────────────────────────────
 # From docs/design/README.md — home (2b) and preview/review (1d) screens.
 GROUND       = (243, 242, 242)  # page background (light screens)

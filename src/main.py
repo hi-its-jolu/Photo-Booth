@@ -18,6 +18,8 @@ from config.config import (
     PRINT_QTY_DEFAULT, PRINT_QTY_MIN, PRINT_QTY_MAX,
     GPIO_BUTTON_START, GPIO_BUTTON_SNAP, GPIO_BUTTON_PRINT,
     GPIO_BUTTON_RETAKE, GPIO_BUTTON_QTY_P, GPIO_BUTTON_QTY_N,
+    GPIO_LED_WHITE, LED_COUNTDOWN_BLINK, LED_COUNTDOWN_BLINK_FAST,
+    LED_REVIEW_BLINK_SLOWEST, LED_REVIEW_BLINK_FASTEST,
     PRINTER_CHECK_INTERVAL,
 )
 from camera      import grab_live_surface, snap_photo
@@ -91,6 +93,8 @@ class GameState:
         self.screen_w: int            = 0
         self.screen_h: int            = 0
         self.gallery_qr_surf          = None
+        self.led_on: bool             = False
+        self.led_next_toggle: float   = 0.0
 
     def clear_session(self):
         self.thumbnails.clear()
@@ -110,7 +114,8 @@ class GameState:
 # ── Setup helpers ─────────────────────────────────────────────────────────────
 
 def _setup_gpio():
-    """Wire arcade buttons on Raspberry Pi. Returns a cleanup callable."""
+    """Wire arcade buttons and the status LED on Raspberry Pi.
+    Returns (cleanup, set_led) callables; set_led is a no-op off the Pi."""
     try:
         import RPi.GPIO as GPIO
         mapping = {pin: key for pin, key in [
@@ -127,11 +132,17 @@ def _setup_gpio():
                 pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=key, mod=0, unicode=""))
         for pin in mapping:
             GPIO.add_event_detect(pin, GPIO.FALLING, callback=_cb, bouncetime=200)
+
+        set_led = lambda on: None
+        if GPIO_LED_WHITE is not None:
+            GPIO.setup(GPIO_LED_WHITE, GPIO.OUT, initial=GPIO.LOW)
+            set_led = lambda on: GPIO.output(GPIO_LED_WHITE, GPIO.HIGH if on else GPIO.LOW)
+
         print(f"GPIO active on pins: {list(mapping.keys())}")
-        return GPIO.cleanup
+        return GPIO.cleanup, set_led
     except (ImportError, RuntimeError):
         print("GPIO not available")
-        return lambda: None
+        return (lambda: None), (lambda on: None)
 
 
 def _build_overlays(screen_w: int, screen_h: int):
@@ -200,6 +211,39 @@ def _discard_session(gs: GameState) -> None:
             os.remove(_session_print_path(gs.session_id))
         except OSError:
             pass
+
+
+# ── Status LED ────────────────────────────────────────────────────────────────
+
+def _led_half_period(gs: GameState, now: float) -> float | None:
+    """Seconds per on/off half-cycle for the status LED, or None to keep it off."""
+    if gs.state == _STATE_COUNTDOWN:
+        remaining = COUNTDOWN_SECONDS - (now - gs.countdown_start)
+        return LED_COUNTDOWN_BLINK_FAST if remaining <= 1.0 else LED_COUNTDOWN_BLINK
+
+    if gs.state == _STATE_GRID:
+        half_timeout = _GRID_TIMEOUT / 2.0
+        time_left    = _GRID_TIMEOUT - (now - gs.grid_enter_time)
+        if time_left > half_timeout:
+            return None  # first half of the review timeout - LED stays off
+        frac = max(0.0, time_left) / half_timeout  # 1.0 at halfway, 0.0 at timeout
+        return LED_REVIEW_BLINK_FASTEST + frac * (LED_REVIEW_BLINK_SLOWEST - LED_REVIEW_BLINK_FASTEST)
+
+    return None
+
+
+def _tick_led(gs: GameState, set_led, now: float) -> None:
+    """Advance the status LED's blink state by one frame."""
+    half_period = _led_half_period(gs, now)
+    if half_period is None:
+        if gs.led_on:
+            gs.led_on = False
+            set_led(False)
+        return
+    if now >= gs.led_next_toggle:
+        gs.led_on          = not gs.led_on
+        gs.led_next_toggle = now + half_period
+        set_led(gs.led_on)
 
 
 # ── Per-state tick functions ──────────────────────────────────────────────────
@@ -374,12 +418,13 @@ def _render_live_frame(gs: GameState, screen, cap, screen_w: int, screen_h: int,
 
 def _run_loop(gs: GameState, screen, cap, clock, screen_w: int, screen_h: int,
               server_base_url: str, vignette, flash_surf, dim_surf,
-              photo_labels, countdown_surfs, snd_beep, snd_shutter) -> None:
+              photo_labels, countdown_surfs, snd_beep, snd_shutter, set_led) -> None:
     while gs.running:
         now = time.monotonic()
         if now - gs.last_printer_check >= PRINTER_CHECK_INTERVAL:
             gs.printer_info        = get_printer_info()
             gs.last_printer_check  = now
+        _tick_led(gs, set_led, now)
 
         if gs.state == _STATE_PRINTING:
             _tick_printing(gs, screen, now)
@@ -433,7 +478,7 @@ def main():
     pygame.mixer.pre_init(AUDIO_FREQ, AUDIO_SIZE, AUDIO_CHANNELS, AUDIO_BUFFER)
     pygame.init()
     pygame.mixer.init()
-    gpio_cleanup = _setup_gpio()
+    gpio_cleanup, set_led = _setup_gpio()
 
     snd_beep    = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_BEEP))
     snd_shutter = pygame.mixer.Sound(os.path.join(_SFX_DIR, _SFX_SHUTTER))
@@ -463,11 +508,12 @@ def main():
 
     _run_loop(gs, screen, cap, clock, screen_w, screen_h, server_base_url,
               vignette, flash_surf, dim_surf,
-              photo_labels, countdown_surfs, snd_beep, snd_shutter)
+              photo_labels, countdown_surfs, snd_beep, snd_shutter, set_led)
 
     if cap is not None:
         cap.release()
     pygame.quit()
+    set_led(False)
     gpio_cleanup()
 
 
